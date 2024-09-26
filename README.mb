@@ -1,0 +1,58 @@
+# GarbageTrack Backend
+
+This is the backend server for the GarbageTrack application.
+
+## Prerequisites
+
+- Node.js (v14 or later)
+- npm
+- MongoDB Atlas account
+
+## Setup
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd garbagetrack-backend
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Create a `.env` file in the root directory and add the following:
+   ```
+   MONGODB_URI=<your-mongodb-uri>
+   PORT=5000
+   ```
+   Replace `<your-mongodb-uri>` with your actual MongoDB connection string.
+
+4. Start the development server:
+   ```
+   npm run dev
+   ```
+
+## Available Scripts
+
+- `npm run dev`: Starts the development server with hot-reloading
+- `npm run build`: Builds the TypeScript code to JavaScript
+- `npm start`: Starts the production server
+
+## Project Structure
+
+- `src/`: Contains the TypeScript source code
+  - `config/`: Configuration files
+  - `models/`: Mongoose models
+  - `routes/`: Express routes
+  - `controllers/`: Route controllers
+  - `middlewares/`: Custom middlewares
+- `dist/`: Contains the compiled JavaScript code (generated after building)
+
+## Contributing
+
+Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE.md file for details
