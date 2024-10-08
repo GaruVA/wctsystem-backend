@@ -28,9 +28,11 @@ Follow these steps to set up the project locally:
 3. **Environment configuration**:
    - Create a .env file in the root directory: type nul > .env
    - Include the following content in the .env file:
-         MONGODB_URI=<mongodb-uri>
-         PORT=5000
-         JWT_SECRET=<jwt-secret>
+      ```env
+      MONGODB_URI=<mongodb-uri>
+      PORT=5000
+      JWT_SECRET=<jwt-secret>
+      ```
    - Ask me for the MongoDB connection string and jwt secret, and replace <mongodb-uri> and <jwt-secret> with it
 
 4. **Start the development server**:
