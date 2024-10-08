@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'garbagetrack_jwt_secret';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -14,7 +16,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     res.status(201).json({ token, user: { id: user._id, email: user.email, name: user.name, userType: user.userType } });
   } catch (error) {
     console.error(error);
-    next(error); // Pass the error to the Express error handler
+    next(error);
   }
 };
 
@@ -49,6 +51,6 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     });
   } catch (error) {
     console.error(error);
-    next(error); // Pass the error to the Express error handler
+    next(error);
   }
 };
