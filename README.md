@@ -16,8 +16,8 @@ Follow these steps to set up the project locally:
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd garbagetrack-backend
+   git clone https://github.com/GaruVA/GarbageTrackBE.git
+   cd GarbageTrackBE
    ```
 
 2. **Install dependencies**:
@@ -26,12 +26,12 @@ Follow these steps to set up the project locally:
    ```
 
 3. **Environment configuration**:
-   - Create a `.env` file in the root directory and add the following environment variables:
-     ```env
-     MONGODB_URI=<your-mongodb-uri>
-     PORT=5000
-     ```
-   - Replace `<your-mongodb-uri>` with your actual MongoDB connection string from MongoDB Atlas.
+   - Create a .env file in the root directory: type nul > .env
+   - Include the following content in the .env file:
+         MONGODB_URI=<mongodb-uri>
+         PORT=5000
+         JWT_SECRET=<jwt-secret>
+   - Ask me for the MongoDB connection string and jwt secret, and replace <mongodb-uri> and <jwt-secret> with it
 
 4. **Start the development server**:
    ```bash
@@ -46,23 +46,3 @@ Follow these steps to set up the project locally:
 - **`npm run build`**: Compiles the TypeScript code into JavaScript, generating the `dist` folder.
 - **`npm start`**: Runs the production server using the compiled JavaScript files.
 
-## Project Structure
-
-The project follows a modular structure for easier maintenance and scalability:
-
-```
-garbagetrack-backend/
-│
-├── src/                    # TypeScript source code
-│   ├── config/             # Configuration files (e.g., database connection)
-│   ├── models/             # Mongoose models defining data schemas
-│   ├── routes/             # Express route handlers
-│   ├── controllers/        # Route controllers with business logic
-│   └── middlewares/        # Custom middleware functions
-│
-├── dist/                   # Compiled JavaScript code (after running build)
-│
-├── .env                    # Environment variables (do not commit this file)
-├── package.json            # Project metadata and dependencies
-└── tsconfig.json           # TypeScript configuration file
-```

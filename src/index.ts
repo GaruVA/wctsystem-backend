@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express'; // Add Request, Response, NextFunction types
+import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/database';
@@ -16,13 +16,13 @@ app.use('/api/auth', authRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack); // Log the error for debugging
-  res.status(500).json({ message: 'Something went wrong, please try again later!' }); // Send a generic error response
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong, please try again later!' });
 });
 
 connectDB();
 
-app.get('/', (req: Request, res: Response) => {  // Typing for req and res
+app.get('/', (req: Request, res: Response) => {
   res.send('GarbageTrack API is running');
 });
 
