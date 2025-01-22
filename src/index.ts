@@ -23,7 +23,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 connectDB();
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('GarbageTrack API is running');
+  res.send('WCTSystem API is running');
 });
 
 app.listen(PORT, () => {

@@ -4,7 +4,7 @@ import User, { IUser } from '../models/User';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'garbagetrack_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'wctsystem_jwt_secret';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

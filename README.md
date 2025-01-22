@@ -1,6 +1,6 @@
-# GarbageTrack Backend
+# WCTSystem-Backend
 
-This repository hosts the backend server for the **GarbageTrack** application, a waste collection tracking and request system for urban areas.
+This repository hosts the backend server for the **WCTSystem** application, a waste collection tracking system for urban areas.
 
 ## Prerequisites
 
