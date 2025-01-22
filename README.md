@@ -33,7 +33,7 @@ Follow these steps to set up the project locally:
       PORT=5000
       JWT_SECRET=<jwt-secret>
       ```
-   - Ask me for the MongoDB connection string and jwt secret, and replace <mongodb-uri> and <jwt-secret> with it
+   - Replace `<mongodb-uri>` and `<jwt-secret>` with your actual MongoDB connection string and JWT secret.
 
 4. **Start the development server**:
    ```bash
@@ -48,3 +48,12 @@ Follow these steps to set up the project locally:
 - **`npm run build`**: Compiles the TypeScript code into JavaScript, generating the `dist` folder.
 - **`npm start`**: Runs the production server using the compiled JavaScript files.
 
+## API Endpoints
+
+- **Authentication**
+  - `POST /api/auth/register`: Register a new user.
+  - `POST /api/auth/login`: Log in an existing user.
+
+- **Bins**
+  - `POST /api/bins/update`: Update bin data.
+  - `GET /api/bins`: Fetch all bin statuses.
