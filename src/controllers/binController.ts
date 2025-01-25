@@ -18,6 +18,30 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
+// Add new function to create bins
+export const createBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { bin_id, latitude, longitude } = req.body;
+
+    try {
+        const newBin = new Bin({
+            bin_id,
+            fill_level: 0, // Initialize empty
+            latitude,
+            longitude,
+            timestamp: new Date().toISOString()
+        });
+
+        await newBin.save();
+        res.status(201).json(newBin);
+    } catch (error: any) {
+        if (error.code === 11000) { // MongoDB duplicate key error
+            res.status(409).json({ message: 'Bin already exists' });
+            return;
+        }
+        res.status(500).json({ message: 'Failed to create bin.' });
+    }
+};
+
 // Function to fetch all bin statuses
 export const getBins = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
