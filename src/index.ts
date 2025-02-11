@@ -2,8 +2,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/database';
-import authRoutes from './routes/authRoutes';
 import binRoutes from './routes/binRoutes';
+import adminRoutes from './routes/adminRoutes';
+import collectorRoutes from './routes/collectorRoutes';
 
 dotenv.config();
 
@@ -13,8 +14,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/auth', authRoutes);
 app.use('/api/bins', binRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/collector', collectorRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
