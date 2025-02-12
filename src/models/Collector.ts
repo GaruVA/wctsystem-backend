@@ -38,4 +38,4 @@ collectorSchema.methods.toJSON = function () {
 	return obj;
 };
 
-export default model<ICollector>('Driver', collectorSchema);
+export default model<ICollector>('Collector', collectorSchema);
