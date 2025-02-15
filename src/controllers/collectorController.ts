@@ -20,7 +20,7 @@ export const loginCollector = async (req: Request, res: Response): Promise<void>
       return;
     }
     const token = jwt.sign(
-      { id: collector._id, postalCode: collector.postalCode },
+      { id: collector._id, role: 'collector' },
       JWT_SECRET,
       { expiresIn: '8h' }
     );

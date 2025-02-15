@@ -19,7 +19,7 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
-    const token = jwt.sign({ id: admin._id }, JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign({ id: admin._id, role: 'admin' }, JWT_SECRET, { expiresIn: '8h' });
     res.json({ token });
   } catch (error) {
     console.error(error);
