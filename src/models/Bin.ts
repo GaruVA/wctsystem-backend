@@ -1,19 +1,25 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export interface IBin extends Document {
-    bin_id: string;
-    fill_level: number;
-    latitude: number;
-    longitude: number;
-    timestamp: string;
+  location: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+  fillLevel: number;
+  lastCollected: Date;
+  area: Schema.Types.ObjectId;
 }
 
 const binSchema = new Schema<IBin>({
-    bin_id: { type: String, required: true, unique: true },
-    fill_level: { type: Number, required: true },
-    latitude: { type: Number, required: true },
-    longitude: { type: Number, required: true },
-    timestamp: { type: String, required: true },
-}, { timestamps: true });
+  location: {
+    type: { type: String, default: 'Point' },
+    coordinates: { type: [Number], required: true }
+  },
+  fillLevel: { type: Number, required: true, min: 0, max: 100 },
+  lastCollected: { type: Date, default: Date.now },
+  area: { type: Schema.Types.ObjectId, ref: 'Area', required: true }
+});
 
-export default mongoose.model<IBin>('Bin', binSchema);
+binSchema.index({ location: '2dsphere' }); // Important for geo queries
+
+export default model<IBin>('Bin', binSchema);

@@ -5,7 +5,7 @@ export interface ICollector extends Document {
   username: string;
   password: string;
   email: string;
-  postalCode: string;
+  area: Schema.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
   comparePassword: (password: string) => Promise<boolean>;
@@ -15,7 +15,7 @@ const collectorSchema = new Schema<ICollector>({
 	username: { type: String, required: true, unique: true },
 	password: { type: String, required: true },
 	email: { type: String, required: true, unique: true },
-	postalCode: { type: String, required: true }
+	area: { type: Schema.Types.ObjectId, ref: 'Area' }
 }, { timestamps: true });
 
 // Hash password before saving
