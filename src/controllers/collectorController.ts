@@ -46,3 +46,32 @@ export const createCollector = async (req: Request, res: Response): Promise<void
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getCollectorArea = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const collector = await Collector.findById(req.user?.id)
+      .populate({
+        path: 'area',
+        populate: { path: 'bins' }
+      });
+
+    if (!collector?.area) {
+      res.status(404).json({ message: 'No area assigned' });
+      return;
+    }
+    
+    // Cast area to any (or to a specific interface if available)
+    const area = collector.area as any;
+
+    res.json({
+      area: {
+        _id: area._id,
+        name: area.name,
+        coordinates: area.coordinates,
+      },
+      bins: area.bins
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
