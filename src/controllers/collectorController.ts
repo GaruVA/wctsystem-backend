@@ -59,35 +59,28 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // Retrieve area details using Area model
     const area = await Area.findById(collector.area) as IArea;
     if (!area) {
       res.status(404).json({ message: 'Area not found' });
       return;
     }
     
-    // Query bins for the area
     const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location') as IBin[];
-
-    // Calculate statistics
-    const totalBins = bins.length;
-    const priorityBins = bins.filter(b => b.fillLevel > 70).length;
-    const avgFill = totalBins ? bins.reduce((sum, b) => sum + b.fillLevel, 0) / totalBins : 0;
-    const urgentBins = bins.filter(b => b.fillLevel > 90).length;
+    
+    // Map bins to include a default "status" field.
+    const mappedBins = bins.map(bin => ({
+      _id: bin._id,
+      location: bin.location,
+      fillLevel: bin.fillLevel,
+      lastCollected: bin.lastCollected,
+      status: "normal"  // default status
+    }));
 
     res.json({
-      area: {
-        _id: area._id,
-        name: area.name,
-        coordinates: area.coordinates,
-      },
-      bins,
-      statistics: {
-        totalBins,
-        priorityBins,
-        avgFill: Number(avgFill.toFixed(1)),
-        urgentBins
-      }
+      areaName: area.name,
+      areaID: area._id,
+      coordinates: area.coordinates,
+      bins: mappedBins
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

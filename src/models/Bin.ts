@@ -17,7 +17,7 @@ const binSchema = new Schema<IBin>({
   },
   fillLevel: { type: Number, required: true, min: 0, max: 100 },
   lastCollected: { type: Date, default: Date.now },
-  area: { type: Schema.Types.ObjectId, ref: 'Area', required: true }
+  area: { type: Schema.Types.ObjectId, ref: 'Area'}
 });
 
 binSchema.index({ location: '2dsphere' }); // Important for geo queries

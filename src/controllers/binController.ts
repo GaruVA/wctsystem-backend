@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Bin from '../models/Bin';
+import Issue from '../models/Issue';
 
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -51,4 +52,41 @@ export const getBins = async (req: Request, res: Response, next: NextFunction): 
         console.error(error);
         res.status(500).json({ message: 'Failed to fetch bin data.' });
     }
+};
+
+export const getBinDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    const bin = await Bin.findById(binId).select('location fillLevel lastCollected');
+    if (!bin) {
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+    // Add default status since it's not stored in the model.
+    res.status(200).json({
+      _id: bin._id,
+      location: bin.location,
+      fillLevel: bin.fillLevel,
+      lastCollected: bin.lastCollected,
+      status: "normal"
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch bin details.' });
+  }
+};
+
+export const reportIssue = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    const { issueType, description } = req.body;
+    const newIssue = new Issue({
+      bin: binId,
+      issueType,
+      description
+    });
+    await newIssue.save();
+    res.status(201).json({ message: 'Issue reported successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to report issue.' });
+  }
 };
