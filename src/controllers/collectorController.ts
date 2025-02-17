@@ -67,13 +67,11 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
     
     const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location') as IBin[];
     
-    // Map bins to include a default "status" field.
     const mappedBins = bins.map(bin => ({
       _id: bin._id,
       location: bin.location,
       fillLevel: bin.fillLevel,
-      lastCollected: bin.lastCollected,
-      status: "normal"  // default status
+      lastCollected: bin.lastCollected
     }));
 
     res.json({

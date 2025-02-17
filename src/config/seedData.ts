@@ -34,16 +34,29 @@ const seedData = async () => {
 
     // Create Bins assigned to Areas - bin_id removed.
     const binsData: Partial<IBin>[] = [
+      // Bins for Downtown (area[0])
       {
         location: { type: 'Point', coordinates: [-73.9300, 40.7280] },
         fillLevel: 45,
-        area: areas[0]._id as mongoose.Schema.Types.ObjectId  // explicit cast
+        area: areas[0]._id as mongoose.Schema.Types.ObjectId
       },
       {
         location: { type: 'Point', coordinates: [-73.9290, 40.7270] },
         fillLevel: 80,
         area: areas[0]._id as Schema.Types.ObjectId
       },
+      // Additional bins for Downtown
+      {
+        location: { type: 'Point', coordinates: [-73.9310, 40.7290] },
+        fillLevel: 50,
+        area: areas[0]._id as mongoose.Schema.Types.ObjectId
+      },
+      {
+        location: { type: 'Point', coordinates: [-73.9320, 40.7275] },
+        fillLevel: 65,
+        area: areas[0]._id as Schema.Types.ObjectId
+      },
+      // Bins for Uptown (area[1])
       {
         location: { type: 'Point', coordinates: [-73.9800, 40.7480] },
         fillLevel: 60,
@@ -53,6 +66,17 @@ const seedData = async () => {
         location: { type: 'Point', coordinates: [-73.9790, 40.7470] },
         fillLevel: 95,
         area: areas[1]._id as Schema.Types.ObjectId
+      },
+      // Additional bins for Uptown
+      {
+        location: { type: 'Point', coordinates: [-73.9810, 40.7490] },
+        fillLevel: 55,
+        area: areas[1]._id as mongoose.Schema.Types.ObjectId
+      },
+      {
+        location: { type: 'Point', coordinates: [-73.9820, 40.7485] },
+        fillLevel: 70,
+        area: areas[1]._id as Schema.Types.ObjectId
       }
     ];
     const bins = await Bin.insertMany(binsData);
@@ -61,13 +85,13 @@ const seedData = async () => {
     const collectorsData = [
       {
         username: 'collector1',
-        password: 'password1',
+        password: '$2a$10$RCejZIRcq0GZh60awFYOCOMzM1hkm4SY43.9OBc58jalNtVyrU9yK',
         email: 'collector1@example.com',
         area: areas[0]._id
       },
       {
         username: 'collector2',
-        password: 'password2',
+        password: '$2a$10$RCejZIRcq0GZh60awFYOCOMzM1hkm4SY43.9OBc58jalNtVyrU9yK',
         email: 'collector2@example.com',
         area: areas[1]._id
       }
