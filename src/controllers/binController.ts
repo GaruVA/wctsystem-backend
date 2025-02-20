@@ -77,16 +77,23 @@ export const getBinDetails = async (req: Request, res: Response, next: NextFunct
 
 export const reportIssue = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { binId } = req.params;
+    let { binId } = req.params;
+    // Remove leading '$' if present
+    if (binId.startsWith('$')) {
+      binId = binId.slice(1);
+    }
     const { issueType, description } = req.body;
+    console.log(`[Backend] Received report for binId=${binId}, issueType=${issueType}`);
     const newIssue = new Issue({
       bin: binId,
       issueType,
       description
     });
     await newIssue.save();
+    console.log('[Backend] New issue saved successfully');
     res.status(201).json({ message: 'Issue reported successfully' });
   } catch (error) {
+    console.error('[Backend] Error reporting issue:', error);
     res.status(500).json({ message: 'Failed to report issue.' });
   }
 };
