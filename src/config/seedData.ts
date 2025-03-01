@@ -5,6 +5,7 @@ import Collector from '../models/Collector';
 import Area, { IArea } from '../models/Area';
 import Bin, { IBin } from '../models/Bin';
 import Issue from '../models/Issue';
+import Dump from '../models/Dump';
 
 const seedData = async () => {
   try {
@@ -16,6 +17,7 @@ const seedData = async () => {
     await Area.deleteMany({});
     await Bin.deleteMany({});
     await Issue.deleteMany({});
+    await Dump.deleteMany({});
 
     // Create Admin
     const admin = new Admin({
@@ -24,13 +26,27 @@ const seedData = async () => {
       email: 'admin@example.com'
     });
     await admin.save();
+    
+    // Create Dumps
+    const dumps = await Dump.insertMany([
+      { name: 'Downtown Waste Facility', coordinates: [-73.940, 40.725] },
+      { name: 'Uptown Recycling Center', coordinates: [-73.980, 40.745] }
+    ]);
 
-    // Create Areas
-    const areaData: Partial<IArea>[] = [
-      { name: 'Downtown', coordinates: [[-73.935242, 40.730610], [-73.925242, 40.730610], [-73.925242, 40.720610]] },
-      { name: 'Uptown', coordinates: [[-73.985242, 40.750610], [-73.975242, 40.750610], [-73.975242, 40.740610]] }
+    // Create Areas with references to dumps
+    const areaData = [
+      { 
+        name: 'Downtown', 
+        coordinates: [[-73.935242, 40.730610], [-73.925242, 40.730610], [-73.925242, 40.720610]],
+        dump: dumps[0]._id 
+      },
+      { 
+        name: 'Uptown', 
+        coordinates: [[-73.985242, 40.750610], [-73.975242, 40.750610], [-73.975242, 40.740610]],
+        dump: dumps[1]._id
+      }
     ];
-    const areas = await Area.insertMany(areaData) as IArea[]; // Added explicit cast
+    const areas = await Area.insertMany(areaData) as unknown as IArea[];
 
     // Create Bins assigned to Areas - bin_id removed.
     const binsData: Partial<IBin>[] = [
