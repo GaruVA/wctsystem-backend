@@ -6,6 +6,7 @@ import { IArea } from '../models/Area';
 import { IBin } from '../models/Bin';
 import Area from '../models/Area';  // New import for alternative method
 import Bin from '../models/Bin';    // ...existing import...
+import Dump from '../models/Dump';
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -59,7 +60,8 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    const area = await Area.findById(collector.area) as IArea;
+    // Populate the area including its dump
+    const area = await Area.findById(collector.area).populate('dump') as IArea & { dump: any };
     if (!area) {
       res.status(404).json({ message: 'Area not found' });
       return;
@@ -78,9 +80,14 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       areaName: area.name,
       areaID: area._id,
       coordinates: area.coordinates,
-      bins: mappedBins
+      bins: mappedBins,
+      dumpLocation: {
+        type: "Point",
+        coordinates: area.dump.coordinates
+      }
     });
   } catch (error) {
+    console.error('Error getting collector area:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
