@@ -5,7 +5,7 @@ export interface ICollector extends Document {
   username: string;
   password: string;
   email: string;
-  currentLocation: [number, number]; // Real-time location
+  currentLocation?: [number, number]; // Real-time location
   area: Schema.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
@@ -17,9 +17,9 @@ const collectorSchema = new Schema<ICollector>({
 	password: { type: String, required: true },
 	email: { type: String, required: true, unique: true },
 	currentLocation: {
-		type: [Number], // [longitude, latitude]
-		required: false // Making it optional initially
-	},
+    type: [Number], // [longitude, latitude]
+    required: false // Optional for now
+  },
 	area: { type: Schema.Types.ObjectId, ref: 'Area' }
 }, { timestamps: true });
 

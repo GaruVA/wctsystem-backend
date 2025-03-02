@@ -97,19 +97,21 @@ const seedData = async () => {
     ];
     const bins = await Bin.insertMany(binsData);
 
-    // Create Collectors each assigned an Area
+    // Create Collectors each assigned an Area with currentLocation within their assigned area
     const collectorsData = [
       {
         username: 'collector1',
-        password: '$2a$10$RCejZIRcq0GZh60awFYOCOMzM1hkm4SY43.9OBc58jalNtVyrU9yK',
+        password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
         email: 'collector1@example.com',
-        area: areas[0]._id
+        area: areas[0]._id,
+        currentLocation: [-73.9310, 40.7275] // Set location within Downtown area
       },
       {
         username: 'collector2',
-        password: '$2a$10$RCejZIRcq0GZh60awFYOCOMzM1hkm4SY43.9OBc58jalNtVyrU9yK',
+        password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
         email: 'collector2@example.com',
-        area: areas[1]._id
+        area: areas[1]._id,
+        currentLocation: [-73.9805, 40.7485] // Set location within Uptown area
       }
     ];
     await Collector.insertMany(collectorsData);

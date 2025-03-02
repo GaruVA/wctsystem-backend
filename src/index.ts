@@ -5,6 +5,15 @@ import connectDB from './config/database';
 import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
+import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
+
+// Import models to ensure they're registered with Mongoose
+import './models/Admin';
+import './models/Collector';
+import './models/Area';
+import './models/Bin';
+import './models/Dump';
+import './models/Issue';
 
 dotenv.config();
 
@@ -17,6 +26,7 @@ app.use(express.json());
 app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
+app.use('/api/routes', routeOptimizationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
