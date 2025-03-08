@@ -8,6 +8,7 @@ import Area from '../models/Area';  // New import for alternative method
 import Bin from '../models/Bin';    // ...existing import...
 import Dump from '../models/Dump';
 import { IDump } from '../models/Dump';
+import { getAddressFromCoordinates } from '../services/geocodingService';
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -82,12 +83,28 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
     
     const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location') as IBin[];
     
-    const mappedBins = bins.map(bin => ({
-      _id: bin._id,
-      location: bin.location,
-      fillLevel: bin.fillLevel,
-      lastCollected: bin.lastCollected
-    }));
+    // Map bins and add address to each bin
+    const mappedBinsPromises = bins.map(async bin => {
+      // Get address for this bin's coordinates
+      const address = await getAddressFromCoordinates(bin.location.coordinates);
+      
+      return {
+        _id: bin._id,
+        location: bin.location,
+        fillLevel: bin.fillLevel,
+        lastCollected: bin.lastCollected,
+        address // Add address to bin data
+      };
+    });
+    
+    // Wait for all address lookups to complete
+    const mappedBins = await Promise.all(mappedBinsPromises);
+
+    console.log('Collector area data prepared', {
+      areaName: area.name,
+      binCount: mappedBins.length,
+      hasDumpLocation: !!dumpLocation
+    });
 
     res.json({
       areaName: area.name,
