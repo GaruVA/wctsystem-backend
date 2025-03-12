@@ -146,3 +146,49 @@ export const getLocation = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const addCollector = async (req: Request, res: Response): Promise<void> => {
+  const { username, password, email, areaId } = req.body;
+  try {
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
+      return;
+    }
+    const newCollector = new Collector({ username, password, email, area: areaId });
+    await newCollector.save();
+    res.status(201).json(newCollector);
+  } catch (error) {
+    console.error('Error adding collector:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const removeCollector = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  try {
+    await Collector.findByIdAndDelete(collectorId);
+    res.status(200).json({ message: 'Collector removed successfully' });
+  } catch (error) {
+    console.error('Error removing collector:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const assignCollectorToArea = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId, areaId } = req.body;
+  try {
+    const collector = await Collector.findById(collectorId);
+    const area = await Area.findById(areaId);
+    if (!collector || !area) {
+      res.status(404).json({ message: 'Collector or Area not found' });
+      return;
+    }
+    collector.area = areaId;
+    await collector.save();
+    res.status(200).json(collector);
+  } catch (error) {
+    console.error('Error assigning collector to area:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

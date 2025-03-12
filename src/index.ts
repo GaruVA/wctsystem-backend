@@ -6,6 +6,8 @@ import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import areaRoutes from './routes/areaRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -27,6 +29,8 @@ app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
 app.use('/api/routes', routeOptimizationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/areas', areaRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
