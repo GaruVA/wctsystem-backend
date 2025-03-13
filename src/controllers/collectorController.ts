@@ -147,6 +147,50 @@ export const getLocation = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+/**
+ * Update the collector's current location
+ */
+export const updateLocation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Check if user is authenticated and has a valid ID
+    if (!req.user?.id) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    const { latitude, longitude } = req.body;
+    
+    // Validate coordinates
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      res.status(400).json({
+        message: 'Valid latitude and longitude are required'
+      });
+      return;
+    }
+
+    // Update the collector's location
+    const updatedCollector = await Collector.findByIdAndUpdate(
+      req.user.id,
+      { currentLocation: [longitude, latitude] },
+      { new: true }
+    );
+
+    if (!updatedCollector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+
+    res.json({
+      message: 'Location updated successfully',
+      currentLocation: updatedCollector.currentLocation,
+      timestamp: updatedCollector.updatedAt
+    });
+  } catch (error) {
+    console.error('Error updating location:', error);
+    res.status(500).json({ message: 'Failed to update location' });
+  }
+};
+
 export const addCollector = async (req: Request, res: Response): Promise<void> => {
   const { username, password, email, areaId } = req.body;
   try {

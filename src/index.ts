@@ -17,7 +17,6 @@ import './models/Area';
 import './models/Bin';
 import './models/Dump';
 import './models/Issue';
-import './models/CollectorLocation';
 
 dotenv.config();
 

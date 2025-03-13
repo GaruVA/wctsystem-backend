@@ -26,8 +26,9 @@ Follow these steps to set up the project locally:
       MONGODB_URI=<mongodb-uri>
       PORT=5000
       JWT_SECRET=<jwt-secret>
+      ORS_API_KEY=<open-route-service-key>
       ```
-   - Replace `<mongodb-uri>` and `<jwt-secret>` with your actual MongoDB connection string and JWT secret.
+   - Replace `<mongodb-uri>`, `<jwt-secret>`, and `<open-route-service-key>` with your actual values.
 
 4. **Start the development server:**
     ```bash
@@ -47,6 +48,7 @@ Follow these steps to set up the project locally:
   - `controllers/`: Controllers for handling requests.
   - `routes/`: Route definitions.
   - `models/`: Mongoose models.
+  - `services/`: Services for business logic and external API integrations.
   - `index.ts`: Main entry point for the application.
 
 #### Models
@@ -116,5 +118,38 @@ export const Bin = mongoose.model<IBin>('Bin', binSchema);
 
 When a request is received from the frontend, it is routed to the corresponding controller function, which processes the request and interacts with the database if necessary, then sends a response back to the frontend.
 
+### API Endpoints
+
+#### Authentication
+- `POST /api/admin/login` - Admin login
+- `POST /api/collector/login` - Collector login
+
+#### Collector
+- `GET /api/collector/location` - Get collector's current location
+- `POST /api/collector/location` - Update collector's current location
+- `GET /api/collector/area` - Get information about collector's assigned area
+
+#### Navigation
+- `POST /api/navigation/directions` - Get directions between two points
+- `POST /api/navigation/next-step` - Get the next turn-by-turn navigation instruction
+
+#### Bins
+- `GET /api/bins` - Get all bins
+- `POST /api/bins/create` - Create a new bin
+- `POST /api/bins/update` - Update bin data
+- `GET /api/bins/:binId` - Get details for a specific bin
+- `POST /api/bins/:binId/report-issue` - Report an issue with a bin
+
+### Services
+
+#### Navigation Service
+The navigation service integrates with the Open Route Service API to provide turn-by-turn directions:
+
+- `getDirectionsFromORS`: Get directions between two points
+- `getRouteWithWaypoints`: Get a route that includes multiple waypoints
+- `calculateDistance`: Calculate distance between two points using the Haversine formula
+
 ### Progress
 - Logins for Admin and Collector have been implemented. (No login is provided for the Resident interface)
+- Route optimization service implemented for efficient waste collection.
+- Navigation service implemented for turn-by-turn directions for collectors.

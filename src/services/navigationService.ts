@@ -4,80 +4,119 @@ import dotenv from 'dotenv';
 dotenv.config();
 const ORS_API_KEY = process.env.ORS_API_KEY;
 
-interface DirectionStep {
-  instruction: string;
-  distance: number;
-  duration: number;
-  name?: string;
-  maneuver: {
-    type: string;
-    modifier?: string;
-  };
+interface DirectionsOptions {
+  profile?: string;
+  preference?: string;
+  instructions?: boolean;
+  language?: string;
+  units?: string;
 }
 
 /**
- * Get turn-by-turn directions from Open Route Service
+ * Get directions from Open Route Service API
+ * @param start Starting coordinates [longitude, latitude]
+ * @param end Destination coordinates [longitude, latitude]
+ * @param options Optional configurations for the directions request
+ * @returns Directions response from ORS
  */
 export async function getDirectionsFromORS(
-  start: [number, number],
-  end: [number, number]
+  start: [number, number], 
+  end: [number, number],
+  options: DirectionsOptions = {}
 ): Promise<any> {
-  if (!ORS_API_KEY) {
-    throw new Error('ORS_API_KEY is not configured');
-  }
-
   try {
+    const { 
+      profile = 'driving-car', 
+      preference = 'recommended', 
+      instructions = true,
+      language = 'en',
+      units = 'meters'
+    } = options;
+
+    // Check if API key exists
+    if (!ORS_API_KEY) {
+      throw new Error('ORS_API_KEY is not configured in environment variables');
+    }
+
     const response = await axios({
       method: 'POST',
-      url: 'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+      url: `https://api.openrouteservice.org/v2/directions/${profile}`,
       headers: {
         'Authorization': ORS_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, application/geo+json'
+        'Content-Type': 'application/json'
       },
       data: {
         coordinates: [start, end],
-        instructions: true,
-        language: 'en',
-        units: 'meters',
+        preference,
+        instructions,
+        language,
+        units,
         maneuvers: true
       }
     });
 
     return response.data;
-  } catch (error: any) {
-    console.error('Error getting directions from ORS:', error.response?.data || error.message);
+  } catch (error) {
+    console.error('Error getting directions from ORS:', error);
     throw new Error('Failed to get directions from routing service');
   }
 }
 
 /**
- * Get the remaining distance to destination
+ * Get directions with multiple waypoints (for full route with multiple bins)
+ * @param coordinates Array of coordinates [longitude, latitude][]
+ * @param options Optional configurations for the directions request
+ * @returns Directions response from ORS
  */
-export async function getRemainingDistance(
-  current: [number, number],
-  destination: [number, number]
-): Promise<number> {
+export async function getRouteWithWaypoints(
+  coordinates: [number, number][],
+  options: DirectionsOptions = {}
+): Promise<any> {
   try {
-    const directions = await getDirectionsFromORS(current, destination);
-    if (!directions?.features?.[0]?.properties?.segments?.[0]) {
-      throw new Error('Invalid response from routing service');
+    const { 
+      profile = 'driving-car', 
+      preference = 'recommended', 
+      instructions = true,
+      language = 'en',
+      units = 'meters'
+    } = options;
+
+    // Check if API key exists
+    if (!ORS_API_KEY) {
+      throw new Error('ORS_API_KEY is not configured in environment variables');
     }
-    
-    return directions.features[0].properties.segments[0].distance;
+
+    const response = await axios({
+      method: 'POST',
+      url: `https://api.openrouteservice.org/v2/directions/${profile}`,
+      headers: {
+        'Authorization': ORS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        coordinates,
+        preference,
+        instructions,
+        language,
+        units,
+        maneuvers: true
+      }
+    });
+
+    return response.data;
   } catch (error) {
-    console.error('Error calculating remaining distance:', error);
-    throw error;
+    console.error('Error getting route with waypoints from ORS:', error);
+    throw new Error('Failed to get route from routing service');
   }
 }
 
 /**
- * Calculate Haversine distance between two points
+ * Calculate distance between two points using Haversine formula
  */
 export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
   lon2: number
 ): number {
   const R = 6371e3; // Earth radius in meters
@@ -90,6 +129,5 @@ export function calculateDistance(
     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
     Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
   return R * c; // Distance in meters
 }
