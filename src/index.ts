@@ -6,6 +6,7 @@ import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
+import navigationRoutes from './routes/navigationRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -14,6 +15,7 @@ import './models/Area';
 import './models/Bin';
 import './models/Dump';
 import './models/Issue';
+import './models/CollectorLocation';
 
 dotenv.config();
 
@@ -27,6 +29,7 @@ app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
 app.use('/api/routes', routeOptimizationRoutes);
+app.use('/api/navigation', navigationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
