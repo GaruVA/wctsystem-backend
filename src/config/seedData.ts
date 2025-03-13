@@ -195,6 +195,12 @@ const seedData = async () => {
         bin: bins[7]._id,
         issueType: 'Graffiti',
         description: 'Bin covered in graffiti needs cleaning.'
+      },
+      {
+
+        bin: bins[3]._id,
+        issueType: 'new Bin',
+        description: 'new bin bin.'
       }
     ];
     await Issue.insertMany(issuesData);

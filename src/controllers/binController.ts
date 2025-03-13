@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import Bin from '../models/Bin';
 import Issue from '../models/Issue';
+import Area from '../models/Area'; // Import the Area model
+
 
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -95,5 +97,23 @@ export const reportIssue = async (req: Request, res: Response, next: NextFunctio
   } catch (error) {
     console.error('[Backend] Error reporting issue:', error);
     res.status(500).json({ message: 'Failed to report issue.' });
+  }
+};
+
+export const assignBinToArea = async (req: Request, res: Response): Promise<void> => {
+  const { binId, areaId } = req.body;
+  try {
+    const bin = await Bin.findById(binId);
+    const area = await Area.findById(areaId);
+    if (!bin || !area) {
+      res.status(404).json({ message: 'Bin or Area not found' });
+      return;
+    }
+    bin.area = areaId;
+    await bin.save();
+    res.status(200).json(bin);
+  } catch (error) {
+    console.error('Error assigning bin to area:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
