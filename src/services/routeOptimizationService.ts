@@ -11,14 +11,32 @@ const useOpenRouteService = ORS_API_KEY && ORS_API_KEY !== '';
  * Interface for the optimized route response
  */
 export interface OptimizedRoute {
-  route: Array<[number, number]>; // The optimized route coordinates
+  route: Array<[number, number]>; // The optimized route coordinates (polyline)
   distance: string | number; // Total distance in meters or formatted string
   duration: string | number; // Total duration in seconds or formatted string
   stops_sequence?: number[]; // The sequence of stops in the optimized order
+  steps?: any[]; // Turn-by-turn navigation instructions
 }
 
 /**
- * Optimize a collection route
+ * Interface for bin order optimization result
+ */
+export interface OptimizedBinOrder {
+  optimizedStops: Array<[number, number]>; // The optimized order of stops
+  stops_sequence: number[]; // The sequence indices in the optimized order
+  estimatedDistance: number; // Estimated straight-line distance in meters
+}
+
+// Define interfaces for ORS API responses
+interface ORSStep {
+  type: string;
+  job?: number;
+  [key: string]: any;
+}
+
+/**
+ * Main function to optimize a collection route
+ * This function handles both bin order optimization and route polyline creation
  */
 export async function optimizeRoute(
   start: [number, number], 
@@ -28,97 +46,207 @@ export async function optimizeRoute(
   try {
     console.log('Route optimization requested');
     
-    // Use OpenRouteService if API key is available, otherwise use local optimization
+    // Step 1: Optimize the bin collection order
+    const optimizedOrder = await optimizeBinOrder(start, stops, end);
+    
+    // Step 2: Generate the actual route polyline with optimized waypoints
+    const waypoints = [start, ...optimizedOrder.optimizedStops, end];
+    
+    // Use OpenRouteService to get the detailed route if API key is available
     if (useOpenRouteService) {
-      console.log('Using OpenRouteService API');
-      return await optimizeWithORS(start, stops, end);
+      console.log('Using OpenRouteService API for route polyline generation');
+      return await generateRoutePolyline(waypoints, optimizedOrder.stops_sequence);
     } else {
-      console.log('Using local optimization algorithm (no ORS_API_KEY provided)');
-      return optimizeLocally(start, stops, end);
+      console.log('Using simplified polyline (no ORS_API_KEY provided)');
+      
+      // Create simplified steps for each segment
+      const steps = [];
+      let currentPoint = start;
+      let totalDistance = 0;
+      
+      // Add initial departure step
+      steps.push({
+        instruction: "Start your journey",
+        distance: "0 km",
+        duration: 0,
+        name: "",
+        maneuver: {
+          type: "depart",
+          modifier: "straight"
+        }
+      });
+      
+      // Add intermediate steps for each waypoint
+      for (let i = 0; i < optimizedOrder.optimizedStops.length; i++) {
+        const nextPoint = optimizedOrder.optimizedStops[i];
+        const legDistance = calculateDistance(currentPoint, nextPoint);
+        totalDistance += legDistance;
+        
+        steps.push({
+          instruction: `Continue to bin ${optimizedOrder.stops_sequence[i] + 1}`,
+          distance: formatDistance(legDistance),
+          duration: Math.ceil(legDistance / 8.33),
+          name: "",
+          maneuver: {
+            type: "continue",
+            modifier: "straight"
+          }
+        });
+        
+        currentPoint = nextPoint;
+      }
+      
+      // Add final step to the end point
+      const finalLegDistance = calculateDistance(currentPoint, end);
+      totalDistance += finalLegDistance;
+      
+      steps.push({
+        instruction: "Arrive at destination",
+        distance: formatDistance(finalLegDistance),
+        duration: Math.ceil(finalLegDistance / 8.33),
+        name: "",
+        maneuver: {
+          type: "arrive",
+          modifier: undefined
+        }
+      });
+      
+      // Return the simplified route information
+      return {
+        route: waypoints,
+        distance: formatDistance(totalDistance),
+        duration: formatDuration(totalDistance / 8.33), // Estimate based on 30km/h
+        stops_sequence: optimizedOrder.stops_sequence,
+        steps: steps
+      };
     }
   } catch (error: any) {
     console.error('Route optimization error:', error);
-    // Fallback to local algorithm if API fails
-    if (useOpenRouteService) {
-      console.log('Falling back to local optimization algorithm');
-      return optimizeLocally(start, stops, end);
-    }
     throw new Error('Failed to optimize route: ' + error.message);
   }
 }
 
 /**
- * Optimize using the OpenRouteService API
+ * Optimize the order of bin collections to minimize travel distance
+ * This function determines the optimal sequence of bins using ORS Optimization API if available
+ * Otherwise, falls back to local nearest-neighbor algorithm
  */
-async function optimizeWithORS(
-  start: [number, number], 
-  stops: Array<[number, number]>, 
+export async function optimizeBinOrder(
+  start: [number, number],
+  stops: Array<[number, number]>,
   end: [number, number]
-): Promise<OptimizedRoute> {
+): Promise<OptimizedBinOrder> {
+  // If ORS API key is available, use the ORS Optimization API
+  if (useOpenRouteService) {
+    try {
+      console.log('Using ORS Optimization API for bin order optimization');
+      return await optimizeWithORSApi(start, stops, end);
+    } catch (error) {
+      console.error('ORS Optimization API failed, falling back to local optimization:', error);
+      // If ORS fails, fall back to local optimization
+      return optimizeWithNearestNeighbor(start, stops, end);
+    }
+  } else {
+    // Use local optimization if no API key is available
+    console.log('Using local nearest-neighbor for bin order optimization (no ORS_API_KEY)');
+    return optimizeWithNearestNeighbor(start, stops, end);
+  }
+}
+
+/**
+ * Optimize bin order using ORS Optimization API
+ * Uses the Vehicle Routing Problem (VRP) solver from ORS
+ */
+async function optimizeWithORSApi(
+  start: [number, number],
+  stops: Array<[number, number]>,
+  end: [number, number]
+): Promise<OptimizedBinOrder> {
   try {
-    // Create waypoints array including start, stops and end points
-    const waypoints = [start, ...stops, end];
+    console.log(`Optimizing order for ${stops.length} bins using ORS API`);
     
-    // Format coordinates as expected by ORS API: [[long,lat], [long,lat], ...]
-    // The coordinates must be a 2D array stringified correctly
-    const coordinatesArray = waypoints.map(point => point);
+    // Build the vehicles array - only one vehicle in our case
+    const vehicles = [{
+      id: 1,
+      profile: "driving-car",
+      start: start,
+      end: end
+    }];
     
-    console.log("Sending coordinates to ORS:", coordinatesArray);
+    // Build the jobs array - one job per bin
+    const jobs = stops.map((stop, index) => ({
+      id: index + 1, // Job IDs should start from 1
+      location: stop
+    }));
     
-    // Call ORS Directions API to get the route
+    // Call ORS Optimization API
+    // The correct endpoint is /optimization, not /v2/optimization
     const response = await axios({
       method: 'post',
-      url: 'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+      url: 'https://api.openrouteservice.org/optimization',
       headers: {
         'Authorization': ORS_API_KEY,
         'Content-Type': 'application/json',
-        'Accept': 'application/json, application/geo+json'
+        'Accept': 'application/json'
       },
       data: {
-        coordinates: coordinatesArray
+        jobs,
+        vehicles
       }
     });
-
-    console.log("ORS API response received");
     
-    const route = response.data;
-    const geometry = route.features[0].geometry.coordinates;
-    const properties = route.features[0].properties;
+    console.log('ORS Optimization API response received');
     
-    // Get segments information
-    const segments = properties.segments[0];
-    const distance = segments.distance;
-    const duration = segments.duration;
+    // Extract the optimized sequence from the response
+    const optimizationResult = response.data;
     
-    // Create a stops_sequence that follows the original order
-    const stops_sequence = stops.map((_, index) => index);
+    // If no routes were found, throw an error
+    if (!optimizationResult.routes || optimizationResult.routes.length === 0) {
+      throw new Error('No valid routes found by the optimization service');
+    }
+    
+    // Extract the sequence of stops from the first route
+    const route = optimizationResult.routes[0];
+    
+    // Map the optimized sequence back to the original stops
+    const stops_sequence = route.steps
+      .filter((step: ORSStep) => step.type === 'job') // Only include job steps with explicit type
+      .map((step: ORSStep) => (step.job ?? 0) - 1); // Convert job ID back to 0-based index with fallback
+    
+    // Create the array of optimized stops in the correct order
+    const optimizedStops = stops_sequence.map((index: number) => stops[index]);
+    
+    // Extract the total distance from the response
+    const estimatedDistance = route.cost;
     
     return {
-      route: geometry,
-      distance: formatDistance(distance),
-      duration: formatDuration(duration),
-      stops_sequence
+      optimizedStops,
+      stops_sequence,
+      estimatedDistance
     };
-  } catch (error: any) {
-    console.error('OpenRouteService API error:', error.response?.data || error.message);
+  } catch (error) {
+    console.error('Error using ORS Optimization API:', error);
     throw error;
   }
 }
 
 /**
- * Local optimization using nearest neighbor algorithm
+ * Optimize bin order using Nearest Neighbor algorithm
+ * Local implementation for when ORS API is not available or fails
  */
-function optimizeLocally(
+function optimizeWithNearestNeighbor(
   start: [number, number],
   stops: Array<[number, number]>,
   end: [number, number]
-): OptimizedRoute {
-  // Simple nearest neighbor algorithm
-  let route = [start];
+): OptimizedBinOrder {
+  // Simple nearest neighbor algorithm for bin order optimization
+  let optimizedStops: Array<[number, number]> = [];
   let remaining = [...stops];
   let currentPoint = start;
   let totalDistance = 0;
   let stops_sequence: number[] = [];
+  
+  console.log(`Optimizing order for ${stops.length} bins using nearest neighbor algorithm`);
   
   while (remaining.length > 0) {
     // Find closest remaining stop
@@ -133,9 +261,9 @@ function optimizeLocally(
       }
     }
     
-    // Add closest stop to route and sequence
+    // Add closest stop to optimized route
     currentPoint = remaining[closestIndex];
-    route.push(currentPoint);
+    optimizedStops.push(currentPoint);
     
     // Find original index in the stops array
     const originalIndex = stops.findIndex(
@@ -149,27 +277,204 @@ function optimizeLocally(
     remaining.splice(closestIndex, 1);
   }
   
-  // Add end point
-  const finalLegDistance = calculateDistance(currentPoint, end);
-  route.push(end);
-  totalDistance += finalLegDistance;
-  
-  // Estimated speed: 30 km/h = 8.33 m/s
-  const averageSpeed = 8.33;
-  const totalDuration = totalDistance / averageSpeed;
+  // Add distance to end point
+  totalDistance += calculateDistance(currentPoint, end);
   
   return {
-    route,
-    distance: formatDistance(totalDistance),
-    duration: formatDuration(totalDuration),
-    stops_sequence
+    optimizedStops,
+    stops_sequence,
+    estimatedDistance: totalDistance
   };
+}
+
+/**
+ * Generate detailed route polyline using OpenRouteService API
+ * This function takes waypoints and generates turn-by-turn route geometry
+ */
+export async function generateRoutePolyline(
+  waypoints: Array<[number, number]>,
+  stops_sequence: number[] = []
+): Promise<OptimizedRoute> {
+  try {
+    console.log("Generating route polyline with", waypoints.length, "waypoints");
+    
+    // Call ORS Directions API to get the route
+    const response = await axios({
+      method: 'post',
+      url: 'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+      headers: {
+        'Authorization': ORS_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, application/geo+json'
+      },
+      data: {
+        coordinates: waypoints,
+        instructions: true,
+        // Removed format_output parameter - it's unsupported
+        maneuvers: true,
+        preference: 'recommended'
+      }
+    });
+
+    console.log("ORS API response received for route polyline");
+    
+    const route = response.data;
+    const geometry = route.features[0].geometry.coordinates;
+    const properties = route.features[0].properties;
+    
+    // Get segments information
+    const segments = properties.segments[0];
+    const distance = segments.distance;
+    const duration = segments.duration;
+    
+    // Process steps to include turn-by-turn navigation instructions
+    const steps = segments.steps.map((step: any) => {
+      // Map the ORS step to our standardized format
+      return {
+        instruction: step.instruction,
+        distance: formatDistance(step.distance),
+        duration: step.duration,
+        name: step.name || '',
+        maneuver: {
+          type: mapManeuverType(step.type),
+          modifier: mapManeuverModifier(step.type, step.instruction)
+        }
+      };
+    });
+
+    return {
+      route: geometry,
+      distance: formatDistance(distance),
+      duration: formatDuration(duration),
+      stops_sequence,
+      steps
+    };
+  } catch (error: any) {
+    console.error('OpenRouteService API error:', error.response?.data || error.message);
+    
+    // If API fails, return a simplified route using the waypoints directly
+    console.log('Falling back to simplified polyline after API failure');
+    
+    // Calculate a rough estimate of the total distance
+    let estimatedDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      estimatedDistance += calculateDistance(waypoints[i], waypoints[i + 1]);
+    }
+    
+    // Create simplified steps for each segment
+    const steps = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const legDistance = calculateDistance(waypoints[i], waypoints[i + 1]);
+      steps.push({
+        instruction: i === 0 ? "Start" : i === waypoints.length - 2 ? "Arrive at destination" : `Continue to next waypoint`,
+        distance: formatDistance(legDistance),
+        duration: Math.ceil(legDistance / 8.33), // Estimate based on 30km/h
+        name: "",
+        maneuver: {
+          type: i === 0 ? "depart" : i === waypoints.length - 2 ? "arrive" : "continue",
+          modifier: "straight"
+        }
+      });
+    }
+    
+    return {
+      route: waypoints,
+      distance: formatDistance(estimatedDistance),
+      duration: formatDuration(estimatedDistance / 8.33), // Estimate based on 30km/h
+      stops_sequence,
+      steps
+    };
+  }
+}
+
+/**
+ * Map Open Route Service maneuver types to our frontend types
+ */
+function mapManeuverType(orsType: number): string {
+  // ORS maneuver types mapping
+  // https://github.com/GIScience/openrouteservice/blob/master/openrouteservice/src/main/java/org/heigit/ors/api/responses/routing/json/JSONIndication.java
+  const types: {[key: number]: string} = {
+    0: 'continue', // "Unknown" - default to continue
+    1: 'continue',
+    2: 'depart',
+    3: 'turn',
+    4: 'turn',
+    5: 'turn',
+    6: 'turn',
+    7: 'turn',
+    8: 'turn',
+    9: 'roundabout',
+    10: 'roundabout',
+    11: 'merge',
+    12: 'merge',
+    13: 'arrive',
+    14: 'arrive',
+    15: 'arrive'
+  };
+  
+  return types[orsType] || 'continue';
+}
+
+/**
+ * Map Open Route Service maneuver modifiers based on type and instruction text
+ */
+function mapManeuverModifier(orsType: number, instruction: string = ''): string | undefined {
+  // Basic ORS maneuver modifiers mapping
+  const modifiers: {[key: number]: string | undefined} = {
+    0: undefined,
+    1: 'straight',
+    2: undefined,
+    3: 'slight right',
+    4: 'right',
+    5: 'sharp right',
+    6: 'sharp left',
+    7: 'left',
+    8: 'slight left',
+    9: undefined,
+    10: undefined,
+    11: 'slight right',
+    12: 'slight left',
+    13: undefined,
+    14: undefined,
+    15: undefined
+  };
+  
+  // Use the basic mapping
+  let modifier = modifiers[orsType];
+  
+  // If we still don't have a modifier, try to infer from instruction text
+  if (!modifier && instruction) {
+    const instructionLower = instruction.toLowerCase();
+    if (instructionLower.includes('right')) {
+      if (instructionLower.includes('slight')) {
+        modifier = 'slight right';
+      } else if (instructionLower.includes('sharp')) {
+        modifier = 'sharp right';
+      } else {
+        modifier = 'right';
+      }
+    } else if (instructionLower.includes('left')) {
+      if (instructionLower.includes('slight')) {
+        modifier = 'slight left';
+      } else if (instructionLower.includes('sharp')) {
+        modifier = 'sharp left';
+      } else {
+        modifier = 'left';
+      }
+    } else if (instructionLower.includes('straight') || 
+               instructionLower.includes('continue') || 
+               instructionLower.includes('head')) {
+      modifier = 'straight';
+    }
+  }
+  
+  return modifier;
 }
 
 /**
  * Calculate distance between two coordinates using Haversine formula
  */
-function calculateDistance(point1: [number, number], point2: [number, number]): number {
+export function calculateDistance(point1: [number, number], point2: [number, number]): number {
   // Convert to radians
   const toRad = (x: number) => x * Math.PI / 180;
   const R = 6371e3; // Earth radius in meters
@@ -190,13 +495,13 @@ function calculateDistance(point1: [number, number], point2: [number, number]): 
 /**
  * Format distance in km with 1 decimal place
  */
-function formatDistance(meters: number): string {
+export function formatDistance(meters: number): string {
   return (meters / 1000).toFixed(1) + ' km';
 }
 
 /**
  * Format duration in minutes, rounded up
  */
-function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number): string {
   return Math.ceil(seconds / 60) + ' min';
 }
