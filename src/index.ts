@@ -6,7 +6,6 @@ import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
-import navigationRoutes from './routes/navigationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import areaRoutes from './routes/areaRoutes';
 
@@ -30,7 +29,6 @@ app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
 app.use('/api/routes', routeOptimizationRoutes);
-app.use('/api/navigation', navigationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
 
