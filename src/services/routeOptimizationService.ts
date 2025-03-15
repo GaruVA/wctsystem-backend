@@ -298,6 +298,23 @@ export async function generateRoutePolyline(
   try {
     console.log("Generating route polyline with", waypoints.length, "waypoints");
     
+    // Build request data
+    const requestData = {
+      coordinates: waypoints,
+      instructions: true,
+      maneuvers: true,
+      preference: 'recommended'
+    };
+    
+    // Log the ORS API request details
+    console.log('ORS API Request URL:', 'https://api.openrouteservice.org/v2/directions/driving-car/geojson');
+    console.log('ORS API Request Headers:', {
+      'Authorization': '[REDACTED API KEY]',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, application/geo+json'
+    });
+    console.log('ORS API Request Data:', JSON.stringify(requestData, null, 2));
+    
     // Call ORS Directions API to get the route
     const response = await axios({
       method: 'post',
@@ -307,16 +324,28 @@ export async function generateRoutePolyline(
         'Content-Type': 'application/json',
         'Accept': 'application/json, application/geo+json'
       },
-      data: {
-        coordinates: waypoints,
-        instructions: true,
-        // Removed format_output parameter - it's unsupported
-        maneuvers: true,
-        preference: 'recommended'
-      }
+      data: requestData
     });
 
-    console.log("ORS API response received for route polyline");
+    // Log response status and basic structure
+    console.log("ORS API Response Status:", response.status);
+    console.log("ORS API Response Structure:", JSON.stringify({
+      type: response.data.type,
+      metadata: response.data.metadata,
+      bbox: response.data.bbox,
+      features: Array.isArray(response.data.features) ? 
+        `Array with ${response.data.features.length} features` : 'No features found',
+      properties: response.data.features?.[0]?.properties ? {
+        segments: `${response.data.features[0].properties.segments?.length || 0} segments`,
+        summary: response.data.features[0].properties.summary,
+        way_points: response.data.features[0].properties.way_points
+      } : 'No properties found'
+    }, null, 2));
+    
+    // Log complete polyline coordinates
+    const geometryCoordinates = response.data.features?.[0]?.geometry?.coordinates || [];
+    console.log("ORS API Geometry Summary:", `${geometryCoordinates.length} coordinate points in polyline`);
+    console.log("ORS API Complete Polyline Coordinates:", JSON.stringify(geometryCoordinates));
     
     const route = response.data;
     const geometry = route.features[0].geometry.coordinates;
@@ -350,7 +379,20 @@ export async function generateRoutePolyline(
       steps
     };
   } catch (error: any) {
-    console.error('OpenRouteService API error:', error.response?.data || error.message);
+    console.error('OpenRouteService API error:');
+    
+    if (axios.isAxiosError(error)) {
+      console.error('ORS API Request failed with status:', error.response?.status);
+      console.error('ORS API Error data:', JSON.stringify(error.response?.data || {}, null, 2));
+      console.error('ORS API Error config:', JSON.stringify({
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers ? 'Headers present' : 'No headers',
+        data: error.config?.data ? JSON.parse(error.config.data as string) : 'No data'
+      }, null, 2));
+    } else {
+      console.error('Non-Axios error:', error.message);
+    }
     
     // If API fails, return a simplified route using the waypoints directly
     console.log('Falling back to simplified polyline after API failure');
