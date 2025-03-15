@@ -21,6 +21,79 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
+/**
+ * Direct method to update a bin's fill level and optionally lastCollected date
+ */
+export const updateBinFillLevel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    const { fillLevel, lastCollected } = req.body;
+    
+    console.log(`[Backend] Updating fill level for bin ${binId} to ${fillLevel}%`);
+    
+    // Prepare update object
+    const updateData: any = { fillLevel };
+    if (lastCollected) {
+      updateData.lastCollected = new Date(lastCollected);
+    }
+    
+    // Find the bin by ID and update its fill level
+    const updatedBin = await Bin.findByIdAndUpdate(
+      binId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedBin) {
+      console.log(`[Backend] Bin ${binId} not found for fill level update`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+
+    console.log(`[Backend] Successfully updated bin ${binId} fill level to ${fillLevel}%`);
+    res.status(200).json({
+      success: true,
+      bin: updatedBin
+    });
+  } catch (error) {
+    console.error('[Backend] Error updating bin fill level:', error);
+    res.status(500).json({ message: 'Failed to update bin fill level.' });
+  }
+};
+
+/**
+ * Direct update method for bin data used by the simulator
+ */
+export const directUpdateBin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { binId, updates } = req.body;
+    
+    console.log(`[Backend] Direct update for bin ${binId}:`, updates);
+    
+    // Find and update the bin
+    const updatedBin = await Bin.findByIdAndUpdate(
+      binId,
+      updates,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedBin) {
+      console.log(`[Backend] Bin ${binId} not found for direct update`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+    
+    console.log(`[Backend] Successfully updated bin ${binId}`);
+    res.status(200).json({
+      success: true,
+      bin: updatedBin
+    });
+  } catch (error) {
+    console.error('[Backend] Error in direct bin update:', error);
+    res.status(500).json({ message: 'Failed to update bin.' });
+  }
+};
+
 // Add new function to create bins
 export const createBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { bin_id, latitude, longitude } = req.body;

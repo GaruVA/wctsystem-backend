@@ -1,5 +1,15 @@
 import express from 'express';
-import { updateBin, getBins, createBin, getBinDetails, reportIssue, assignBinToArea, collectBin } from '../controllers/binController';
+import { 
+  updateBin, 
+  getBins, 
+  createBin, 
+  getBinDetails, 
+  reportIssue, 
+  assignBinToArea, 
+  collectBin,
+  updateBinFillLevel,
+  directUpdateBin
+} from '../controllers/binController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 
@@ -14,6 +24,8 @@ router.get('/', getBins);
 router.get('/:binId', getBinDetails);
 router.post('/:binId/report-issue', reportIssue);
 router.post('/:binId/collect', auth, requireRole('collector'), collectBin);
+router.put('/:binId/update-fill-level', updateBinFillLevel);
+router.post('/direct-update', directUpdateBin);
 
 router.post('/assign', auth, requireRole('admin'), assignBinToArea);
 
