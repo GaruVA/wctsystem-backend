@@ -77,6 +77,46 @@ export const getBinDetails = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+/**
+ * Mark a bin as collected by setting its fill level to 0 and updating the lastCollected timestamp
+ */
+export const collectBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    console.log(`[Backend] Marking bin ${binId} as collected`);
+    
+    // Find the bin by ID and update its fill level and lastCollected timestamp
+    const updatedBin = await Bin.findByIdAndUpdate(
+      binId,
+      { 
+        fillLevel: 0, 
+        lastCollected: new Date() 
+      },
+      { new: true, runValidators: true }
+    ).select('location fillLevel lastCollected');
+
+    if (!updatedBin) {
+      console.log(`[Backend] Bin ${binId} not found`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+
+    console.log(`[Backend] Bin ${binId} marked as collected successfully`);
+    res.status(200).json({
+      success: true,
+      bin: {
+        _id: updatedBin._id,
+        location: updatedBin.location,
+        fillLevel: updatedBin.fillLevel,
+        lastCollected: updatedBin.lastCollected
+      }
+    });
+  } catch (error) {
+    console.error('[Backend] Error collecting bin:', error);
+    res.status(500).json({ message: 'Failed to mark bin as collected.' });
+  }
+};
+
 export const reportIssue = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     let { binId } = req.params;
