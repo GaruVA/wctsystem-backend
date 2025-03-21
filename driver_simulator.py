@@ -13,9 +13,55 @@ from typing import List, Tuple, Dict
 import os
 import argparse
 from datetime import datetime
+import math
 
-# Route coordinates from the ORS API response
-ROUTE_COORDINATES = [
+def evenly_space_coordinates(coordinates: List[List[float]], spacing_factor: float = 0.0001) -> List[List[float]]:
+    """
+    Create evenly spaced points along line segments in a route.
+    
+    Args:
+        coordinates: List of [longitude, latitude] coordinates
+        spacing_factor: Approximate spacing between points in degrees
+        
+    Returns:
+        New list with evenly spaced coordinates
+    """
+    if len(coordinates) < 2:
+        return coordinates
+    
+    result = [coordinates[0]]  # Start with the first point
+    
+    for i in range(len(coordinates) - 1):
+        start_point = coordinates[i]
+        end_point = coordinates[i + 1]
+        
+        # Calculate distance between points
+        distance = math.sqrt(
+            (end_point[0] - start_point[0])**2 + 
+            (end_point[1] - start_point[1])**2
+        )
+        
+        # Calculate number of intermediate points needed
+        num_points = max(1, int(distance / spacing_factor))
+        
+        # Generate intermediate points
+        for j in range(1, num_points):
+            ratio = j / num_points
+            intermediate_lon = start_point[0] + ratio * (end_point[0] - start_point[0])
+            intermediate_lat = start_point[1] + ratio * (end_point[1] - start_point[1])
+            result.append([round(intermediate_lon, 6), round(intermediate_lat, 6)])
+        
+        # Add the end point (except for the last iteration, as we'll add the final point at the end)
+        if i < len(coordinates) - 2:
+            result.append(end_point)
+    
+    # Add the final point
+    result.append(coordinates[-1])
+    
+    return result
+
+# Original route coordinates
+ORIGINAL_ROUTE_COORDINATES = [
     [-73.957618, 40.776143],
     [-73.957939, 40.776281],
     [-73.959469, 40.77693],
@@ -35,6 +81,9 @@ ROUTE_COORDINATES = [
     [-73.960321, 40.773016],
     [-73.959191, 40.77254]
 ]
+
+# Create evenly spaced route coordinates
+ROUTE_COORDINATES = evenly_space_coordinates(ORIGINAL_ROUTE_COORDINATES, 0.0002)
 
 # Define bin/stop coordinates (these are the waypoints we want to stop at)
 BIN_COORDINATES = [
