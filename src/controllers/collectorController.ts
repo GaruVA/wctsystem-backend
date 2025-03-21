@@ -38,22 +38,6 @@ export const loginCollector = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const createCollector = async (req: Request, res: Response): Promise<void> => {
-  const { username, password, email, postalCode } = req.body;
-  try {
-    const newCollector = new Collector({ username, password, email, postalCode });
-    await newCollector.save();
-    res.status(201).json({ message: 'Collector account created successfully' });
-  } catch (error: any) {
-    console.error(error);
-    if (error.code === 11000) {
-      res.status(409).json({ message: 'Collector already exists' });
-      return;
-    }
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
 export const getCollectorArea = async (req: Request, res: Response): Promise<void> => {
   try {
     const collector = await Collector.findById(req.user?.id);
@@ -201,9 +185,16 @@ export const addCollector = async (req: Request, res: Response): Promise<void> =
     }
     const newCollector = new Collector({ username, password, email, area: areaId });
     await newCollector.save();
-    res.status(201).json(newCollector);
-  } catch (error) {
+    res.status(201).json({
+      message: 'Collector account created successfully',
+      collector: newCollector
+    });
+  } catch (error: any) {
     console.error('Error adding collector:', error);
+    if (error.code === 11000) {
+      res.status(409).json({ message: 'Collector already exists' });
+      return;
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -1,7 +1,6 @@
 import express from 'express';
 import { 
     loginCollector, 
-    createCollector, 
     getCollectorArea, 
     getLocation, 
     updateLocation, 
@@ -16,20 +15,19 @@ import { auth, requireRole } from '../middleware/auth';
 
 const router = express.Router();
 
+// Authentication
 router.post('/login', loginCollector);
-router.post('/create', auth, requireRole('admin'), createCollector);
-router.get('/area', auth, requireRole('collector'), getCollectorArea);
 
-// Location routes
+// Collector-specific routes
+router.get('/area', auth, requireRole('collector'), getCollectorArea);
 router.get('/location', auth, requireRole('collector'), getLocation);
 router.post('/location', auth, requireRole('collector'), updateLocation);
 
+// Admin management routes
 router.post('/assign', auth, requireRole('admin'), assignCollectorToArea);
-
-// CRUD routes for collectors
 router.get('/', auth, requireRole('admin'), getAllCollectors);
+router.post('/', auth, requireRole('admin'), addCollector);  // Changed from /add to /
 router.get('/:collectorId', auth, requireRole('admin'), getCollectorById);
-router.post('/add', auth, requireRole('admin'), addCollector);
 router.put('/:collectorId', auth, requireRole('admin'), updateCollector);
 router.delete('/:collectorId', auth, requireRole('admin'), deleteCollector);
 
