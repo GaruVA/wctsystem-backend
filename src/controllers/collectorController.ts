@@ -208,17 +208,6 @@ export const addCollector = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const removeCollector = async (req: Request, res: Response): Promise<void> => {
-  const { collectorId } = req.params;
-  try {
-    await Collector.findByIdAndDelete(collectorId);
-    res.status(200).json({ message: 'Collector removed successfully' });
-  } catch (error) {
-    console.error('Error removing collector:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
 export const assignCollectorToArea = async (req: Request, res: Response): Promise<void> => {
   const { collectorId, areaId } = req.body;
   try {
@@ -233,6 +222,78 @@ export const assignCollectorToArea = async (req: Request, res: Response): Promis
     res.status(200).json(collector);
   } catch (error) {
     console.error('Error assigning collector to area:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get all collectors
+ */
+export const getAllCollectors = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const collectors = await Collector.find();
+    res.json(collectors);
+  } catch (error) {
+    console.error('Error fetching collectors:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get a collector by ID
+ */
+export const getCollectorById = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  try {
+    const collector = await Collector.findById(collectorId);
+    if (!collector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+    res.json(collector);
+  } catch (error) {
+    console.error('Error fetching collector:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update a collector
+ */
+export const updateCollector = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  const { username, email, area } = req.body;
+  try {
+    const updatedCollector = await Collector.findByIdAndUpdate(
+      collectorId,
+      { username, email, area },
+      { new: true }
+    );
+    if (!updatedCollector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+    res.json(updatedCollector);
+  } catch (error) {
+    console.error('Error updating collector:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Delete a collector
+ */
+export const deleteCollector = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  try {
+    const deletedCollector = await Collector.findByIdAndDelete(collectorId);
+    if (!deletedCollector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+    res.json({ message: 'Collector deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting collector:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
