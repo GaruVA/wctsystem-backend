@@ -199,11 +199,18 @@ export const reportIssue = async (req: Request, res: Response, next: NextFunctio
     }
     const { issueType, description } = req.body;
     console.log(`[Backend] Received report for binId=${binId}, issueType=${issueType}`);
-    const newIssue = new Issue({
+    
+    const issueData: { bin: string; issueType: string; description?: string } = {
       bin: binId,
-      issueType,
-      description
-    });
+      issueType
+    };
+    
+    // Only add description if it's provided
+    if (description) {
+      issueData.description = description;
+    }
+    
+    const newIssue = new Issue(issueData);
     await newIssue.save();
     console.log('[Backend] New issue saved successfully');
     res.status(201).json({ message: 'Issue reported successfully' });
