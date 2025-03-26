@@ -6,8 +6,6 @@ import { IArea } from '../models/Area';
 import { IBin } from '../models/Bin';
 import Area from '../models/Area';  // New import for alternative method
 import Bin from '../models/Bin';    // ...existing import...
-import Dump from '../models/Dump';
-import { IDump } from '../models/Dump';
 import { getAddressFromCoordinates } from '../services/geocodingService';
 
 dotenv.config();
@@ -46,25 +44,14 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // First get the area without population
+    // Get the area with start and end locations
     const area = await Area.findById(collector.area);
     if (!area) {
       res.status(404).json({ message: 'Area not found' });
       return;
     }
     
-    // Separately get the dump to handle potential errors
-    let dumpLocation = { type: "Point", coordinates: [0, 0] };
-    try {
-      const dump = await Dump.findById(area.dump) as IDump;
-      if (dump) {
-        dumpLocation.coordinates = dump.coordinates;
-      }
-    } catch (dumpError) {
-      console.error('Error fetching dump:', dumpError);
-      // Continue with default dump location
-    }
-    
+    // Get bins in this area
     const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location') as IBin[];
     
     // Map bins and add address to each bin
@@ -86,16 +73,16 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
 
     console.log('Collector area data prepared', {
       areaName: area.name,
-      binCount: mappedBins.length,
-      hasDumpLocation: !!dumpLocation
+      binCount: mappedBins.length
     });
 
     res.json({
       areaName: area.name,
       areaID: area._id,
-      coordinates: area.coordinates,
+      geometry: area.geometry,
       bins: mappedBins,
-      dumpLocation
+      startLocation: area.startLocation,
+      endLocation: area.endLocation
     });
   } catch (error) {
     console.error('Error getting collector area:', error);

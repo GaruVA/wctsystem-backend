@@ -5,7 +5,10 @@ export interface ICollector extends Document {
   username: string;
   password: string;
   email: string;
-  currentLocation?: [number, number]; // Real-time location
+  currentLocation?: {
+    type: string;
+    coordinates: number[];
+  };
   area: Schema.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
@@ -17,8 +20,15 @@ const collectorSchema = new Schema<ICollector>({
 	password: { type: String, required: true },
 	email: { type: String, required: true, unique: true },
 	currentLocation: {
-    type: [Number], // [longitude, latitude]
-    required: false // Optional for now
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: false
+    }
   },
 	area: { type: Schema.Types.ObjectId, ref: 'Area' }
 }, { timestamps: true });
@@ -42,5 +52,8 @@ collectorSchema.methods.toJSON = function () {
 	delete obj.password;
 	return obj;
 };
+
+// Create 2dsphere index for geo queries
+collectorSchema.index({ 'currentLocation': '2dsphere' });
 
 export default model<ICollector>('Collector', collectorSchema);

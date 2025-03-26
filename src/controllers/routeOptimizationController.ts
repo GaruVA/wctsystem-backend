@@ -1,4 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import Bin from '../models/Bin';
+import Area from '../models/Area';
 import * as routeOptimizationService from '../services/routeOptimizationService';
 
 interface RouteOptimizationRequest {
@@ -95,5 +97,67 @@ export const generateRoutePolyline = async (req: Request, res: Response): Promis
       message: 'Failed to generate route polyline',
       error: error.message
     });
+  }
+};
+
+/**
+ * Get optimized route for a specific area
+ */
+export const getOptimizedRoute = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { areaId } = req.params;
+
+    // Get area details including start and end locations
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
+      return;
+    }
+
+    // Get bins in this area that need collection (fill level > threshold)
+    const fillLevelThreshold = 70; // Bins with fill level > 70% need collection
+    const bins = await Bin.find({
+      area: areaId,
+      fillLevel: { $gt: fillLevelThreshold }
+    });
+
+    // If no bins need collection, return empty route
+    if (bins.length === 0) {
+      res.status(200).json({
+        message: 'No bins need collection in this area',
+        route: [],
+        startLocation: area.startLocation.coordinates,
+        endLocation: area.endLocation.coordinates
+      });
+      return;
+    }
+
+    // Extract bin locations for optimization and ensure they are properly typed as [number, number]
+    const binLocations = bins.map(bin => {
+      // Ensure we have a proper [longitude, latitude] tuple
+      const [longitude, latitude] = bin.location.coordinates;
+      return [longitude, latitude] as [number, number];
+    });
+
+    // Ensure start and end locations are also properly typed
+    const startCoords = area.startLocation.coordinates as [number, number];
+    const endCoords = area.endLocation.coordinates as [number, number];
+
+    // Optimize route using the service function
+    const optimizedRoute = await routeOptimizationService.optimizeRoute(
+      startCoords,     // Start from area's start location
+      binLocations,    // Visit bins that need collection
+      endCoords        // End at area's end location
+    );
+
+    res.status(200).json({
+      route: optimizedRoute,
+      startLocation: area.startLocation.coordinates,
+      endLocation: area.endLocation.coordinates,
+      totalBins: bins.length
+    });
+  } catch (error) {
+    console.error('[Route Optimization] Error:', error);
+    res.status(500).json({ message: 'Failed to calculate optimized route.' });
   }
 };
