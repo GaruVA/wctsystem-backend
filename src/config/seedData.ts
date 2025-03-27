@@ -63,7 +63,7 @@ const seedData = async () => {
         },
         startLocation: {
           type: 'Point',
-          coordinates: [79.85924995176988, 6.870162993824585] // Starting point
+          coordinates: [79.85970548542655, 6.864508658378935] // Starting point
         },
         endLocation: {
           type: 'Point',
@@ -145,11 +145,6 @@ const seedData = async () => {
       {
         location: { type: 'Point', coordinates: [79.85924995176988, 6.870162993824585] },
         fillLevel: 65,
-        area: areas[0]._id as mongoose.Schema.Types.ObjectId
-      },
-      {
-        location: { type: 'Point', coordinates: [79.86118114212921, 6.870376029783507] },
-        fillLevel: 35,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId
       },
       {
