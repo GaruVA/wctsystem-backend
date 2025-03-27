@@ -73,7 +73,9 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
 
     console.log('Collector area data prepared', {
       areaName: area.name,
-      binCount: mappedBins.length
+      binCount: mappedBins.length,
+      startLocation: area.startLocation,
+      endLocation: area.endLocation
     });
 
     res.json({
