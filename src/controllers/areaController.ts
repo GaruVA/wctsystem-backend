@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Area from '../models/Area';
 import Bin from '../models/Bin';
 import Collector from '../models/Collector';
+import { getAddressFromCoordinates } from '../services/geocodingService';
 
 export const addArea = async (req: Request, res: Response): Promise<void> => {
   const { name, geometry, startLocation, endLocation } = req.body;
@@ -213,5 +214,52 @@ export const getAreaCollectors = async (req: Request, res: Response, next: NextF
   } catch (error) {
     console.error('[Area Controller] Error fetching area collectors:', error);
     res.status(500).json({ message: 'Failed to fetch area collectors.' });
+  }
+};
+
+// Get all areas with their bins
+export const getAllAreasWithBins = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get all areas
+    const areas = await Area.find();
+    
+    // Map over areas and add bins for each
+    const areasWithBins = await Promise.all(
+      areas.map(async (area) => {
+        // Get bins for this area
+        const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected');
+        
+        // Map bins and add address to each bin using geocoding service
+        const binsWithAddresses = await Promise.all(
+          bins.map(async (bin) => {
+            // Get address for this bin's coordinates
+            const address = await getAddressFromCoordinates(bin.location.coordinates);
+            
+            return {
+              _id: bin._id,
+              location: bin.location,
+              fillLevel: bin.fillLevel,
+              lastCollected: bin.lastCollected,
+              address // Add address to bin data
+            };
+          })
+        );
+
+        return {
+          areaName: area.name,
+          areaID: area._id,
+          geometry: area.geometry,
+          bins: binsWithAddresses,
+          startLocation: area.startLocation,
+          endLocation: area.endLocation
+        };
+      })
+    );
+
+    console.log(`Retrieved ${areas.length} areas with their bins`);
+    res.status(200).json(areasWithBins);
+  } catch (error) {
+    console.error('Error getting areas with bins:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
