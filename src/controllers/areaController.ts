@@ -233,8 +233,12 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
         const binsWithAddresses = await Promise.all(
           bins.map(async (bin) => {
             // Get address for this bin's coordinates
-            const address = await getAddressFromCoordinates(bin.location.coordinates);
-            
+            let address = '';
+            try {
+              address = await getAddressFromCoordinates(bin.location.coordinates);
+            } catch (error) {
+              console.error(`Error getting address for bin ${bin._id}:`, error);
+            }
             return {
               _id: bin._id,
               location: bin.location,
