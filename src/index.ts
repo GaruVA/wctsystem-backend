@@ -8,6 +8,7 @@ import collectorRoutes from './routes/collectorRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import areaRoutes from './routes/areaRoutes';
+import scheduleRoutes from './routes/scheduleRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -15,6 +16,7 @@ import './models/Collector';
 import './models/Area';
 import './models/Bin';
 import './models/Issue';
+import './models/Schedule';
 
 dotenv.config();
 
@@ -27,9 +29,10 @@ app.use(express.json());
 app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
-app.use('/api/routes', routeOptimizationRoutes);
+app.use('/api/route-optimization', routeOptimizationRoutes); // Updated path to match frontend
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
+app.use('/api/schedules', scheduleRoutes); // Added schedule routes
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
