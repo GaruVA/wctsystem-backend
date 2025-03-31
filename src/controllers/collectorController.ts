@@ -4,8 +4,8 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { IArea } from '../models/Area';
 import { IBin } from '../models/Bin';
-import Area from '../models/Area';  // New import for alternative method
-import Bin from '../models/Bin';    // ...existing import...
+import Area from '../models/Area';
+import Bin from '../models/Bin';
 import { getAddressFromCoordinates } from '../services/geocodingService';
 
 dotenv.config();
@@ -36,6 +36,7 @@ export const loginCollector = async (req: Request, res: Response): Promise<void>
   }
 };
 
+// Get collector's assigned area with bins
 export const getCollectorArea = async (req: Request, res: Response): Promise<void> => {
   try {
     const collector = await Collector.findById(req.user?.id);
@@ -71,13 +72,6 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
     // Wait for all address lookups to complete
     const mappedBins = await Promise.all(mappedBinsPromises);
 
-    console.log('Collector area data prepared', {
-      areaName: area.name,
-      binCount: mappedBins.length,
-      startLocation: area.startLocation,
-      endLocation: area.endLocation
-    });
-
     res.json({
       areaName: area.name,
       areaID: area._id,
@@ -109,7 +103,7 @@ export const getLocation = async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
-    // Return the current location, updated timestamp is available from the document
+    // Return the current location
     res.json({ 
       currentLocation: collector.currentLocation,
       lastUpdate: collector.updatedAt
@@ -125,7 +119,6 @@ export const getLocation = async (req: Request, res: Response): Promise<void> =>
  */
 export const updateLocation = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Check if user is authenticated and has a valid ID
     if (!req.user?.id) {
       res.status(401).json({ message: 'Authentication required' });
       return;
@@ -144,7 +137,10 @@ export const updateLocation = async (req: Request, res: Response): Promise<void>
     // Update the collector's location
     const updatedCollector = await Collector.findByIdAndUpdate(
       req.user.id,
-      { currentLocation: [longitude, latitude] },
+      { 
+        currentLocation: [longitude, latitude],
+        lastActive: new Date()
+      },
       { new: true }
     );
 
@@ -164,15 +160,33 @@ export const updateLocation = async (req: Request, res: Response): Promise<void>
   }
 };
 
+/**
+ * Create a new collector (admin only)
+ */
 export const addCollector = async (req: Request, res: Response): Promise<void> => {
-  const { username, password, email, areaId } = req.body;
+  const { username, password, email, firstName, lastName, phone, areaId, status } = req.body;
   try {
-    const area = await Area.findById(areaId);
-    if (!area) {
-      res.status(404).json({ message: 'Area not found' });
-      return;
+    // Check if area exists if provided
+    if (areaId) {
+      const area = await Area.findById(areaId);
+      if (!area) {
+        res.status(404).json({ message: 'Area not found' });
+        return;
+      }
     }
-    const newCollector = new Collector({ username, password, email, area: areaId });
+    
+    // Create collector with provided fields
+    const newCollector = new Collector({ 
+      username, 
+      password, 
+      email, 
+      firstName, 
+      lastName,
+      phone,
+      area: areaId,
+      status: status || 'active'
+    });
+    
     await newCollector.save();
     res.status(201).json({
       message: 'Collector account created successfully',
@@ -188,6 +202,9 @@ export const addCollector = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+/**
+ * Assign collector to area (admin only)
+ */
 export const assignCollectorToArea = async (req: Request, res: Response): Promise<void> => {
   const { collectorId, areaId } = req.body;
   try {
@@ -199,7 +216,10 @@ export const assignCollectorToArea = async (req: Request, res: Response): Promis
     }
     collector.area = areaId;
     await collector.save();
-    res.status(200).json(collector);
+    res.status(200).json({
+      message: 'Collector assigned to area successfully',
+      collector
+    });
   } catch (error) {
     console.error('Error assigning collector to area:', error);
     res.status(500).json({ message: 'Server error' });
@@ -207,11 +227,11 @@ export const assignCollectorToArea = async (req: Request, res: Response): Promis
 };
 
 /**
- * Get all collectors
+ * Get all collectors (admin only)
  */
 export const getAllCollectors = async (req: Request, res: Response): Promise<void> => {
   try {
-    const collectors = await Collector.find();
+    const collectors = await Collector.find().populate('area', 'name');
     res.json(collectors);
   } catch (error) {
     console.error('Error fetching collectors:', error);
@@ -220,12 +240,12 @@ export const getAllCollectors = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Get a collector by ID
+ * Get a collector by ID (admin only)
  */
 export const getCollectorById = async (req: Request, res: Response): Promise<void> => {
   const { collectorId } = req.params;
   try {
-    const collector = await Collector.findById(collectorId);
+    const collector = await Collector.findById(collectorId).populate('area', 'name');
     if (!collector) {
       res.status(404).json({ message: 'Collector not found' });
       return;
@@ -238,22 +258,47 @@ export const getCollectorById = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Update a collector
+ * Update a collector (admin only)
  */
 export const updateCollector = async (req: Request, res: Response): Promise<void> => {
   const { collectorId } = req.params;
-  const { username, email, area } = req.body;
+  const { username, email, firstName, lastName, phone, area, status } = req.body;
+
   try {
+    // Check if area exists if provided
+    if (area) {
+      const areaExists = await Area.findById(area);
+      if (!areaExists) {
+        res.status(404).json({ message: 'Area not found' });
+        return;
+      }
+    }
+
+    // Build update object with provided fields
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (phone) updateData.phone = phone;
+    if (area) updateData.area = area;
+    if (status) updateData.status = status;
+    
     const updatedCollector = await Collector.findByIdAndUpdate(
       collectorId,
-      { username, email, area },
+      updateData,
       { new: true }
     );
+    
     if (!updatedCollector) {
       res.status(404).json({ message: 'Collector not found' });
       return;
     }
-    res.json(updatedCollector);
+    
+    res.json({
+      message: 'Collector updated successfully',
+      collector: updatedCollector
+    });
   } catch (error) {
     console.error('Error updating collector:', error);
     res.status(500).json({ message: 'Server error' });
@@ -261,7 +306,7 @@ export const updateCollector = async (req: Request, res: Response): Promise<void
 };
 
 /**
- * Delete a collector
+ * Delete a collector (admin only)
  */
 export const deleteCollector = async (req: Request, res: Response): Promise<void> => {
   const { collectorId } = req.params;
@@ -274,6 +319,60 @@ export const deleteCollector = async (req: Request, res: Response): Promise<void
     res.json({ message: 'Collector deleted successfully' });
   } catch (error) {
     console.error('Error deleting collector:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update collector status (admin only)
+ */
+export const updateCollectorStatus = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  const { status } = req.body;
+  
+  // Validate status
+  if (!['active', 'on-leave', 'inactive'].includes(status)) {
+    res.status(400).json({ message: 'Invalid status. Must be active, on-leave, or inactive' });
+    return;
+  }
+  
+  try {
+    const collector = await Collector.findByIdAndUpdate(
+      collectorId,
+      { status, lastActive: status === 'active' ? new Date() : undefined },
+      { new: true }
+    );
+    
+    if (!collector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+    
+    res.json({
+      message: `Collector status updated to ${status}`,
+      collector
+    });
+  } catch (error) {
+    console.error('Error updating collector status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get active collectors (admin only)
+ */
+export const getActiveCollectors = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const collectors = await Collector.find({ status: 'active' })
+      .select('-password')
+      .populate('area', 'name');
+      
+    res.json({
+      count: collectors.length,
+      collectors
+    });
+  } catch (error) {
+    console.error('Error getting active collectors:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -9,7 +9,9 @@ import {
     getAllCollectors,
     getCollectorById,
     updateCollector,
-    deleteCollector 
+    deleteCollector,
+    updateCollectorStatus,
+    getActiveCollectors
 } from '../controllers/collectorController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -26,9 +28,11 @@ router.post('/location', auth, requireRole('collector'), updateLocation);
 // Admin management routes
 router.post('/assign', auth, requireRole('admin'), assignCollectorToArea);
 router.get('/', auth, requireRole('admin'), getAllCollectors);
-router.post('/', auth, requireRole('admin'), addCollector);  // Changed from /add to /
+router.get('/active', auth, requireRole('admin'), getActiveCollectors);
+router.post('/', auth, requireRole('admin'), addCollector);  
 router.get('/:collectorId', auth, requireRole('admin'), getCollectorById);
 router.put('/:collectorId', auth, requireRole('admin'), updateCollector);
 router.delete('/:collectorId', auth, requireRole('admin'), deleteCollector);
+router.patch('/:collectorId/status', auth, requireRole('admin'), updateCollectorStatus);
 
 export default router;

@@ -323,6 +323,11 @@ const seedData = async () => {
         username: 'collector1',
         password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
         email: 'collector1@example.com',
+        firstName: 'John',
+        lastName: 'Smith',
+        phone: '+94 77 123 4567',
+        status: 'active',
+        lastActive: new Date(),
         area: areas[0]._id,
         currentLocation: {
           type: 'Point',
@@ -333,10 +338,45 @@ const seedData = async () => {
         username: 'collector2',
         password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
         email: 'collector2@example.com',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
+        phone: '+94 76 234 5678',
+        status: 'active',
+        lastActive: new Date(),
         area: areas[1]._id,
         currentLocation: {
           type: 'Point',
           coordinates: [79.86465509415085, 6.8708554775313955] // Inside Pamankada West
+        }
+      },
+      {
+        username: 'collector3',
+        password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
+        email: 'collector3@example.com',
+        firstName: 'Michael',
+        lastName: 'Williams',
+        phone: '+94 75 345 6789',
+        status: 'on-leave',
+        lastActive: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        area: areas[0]._id,
+        currentLocation: {
+          type: 'Point',
+          coordinates: [79.86018114212921, 6.869376029783507] // Inside Wellawatte South
+        }
+      },
+      {
+        username: 'collector4',
+        password: '$2a$10$Ipo2iSuZyQ868XSK2W.Mk.Chbm0wcjhri8zl5mTq3eVYyqxeEV9iO',
+        email: 'collector4@example.com',
+        firstName: 'Emily',
+        lastName: 'Brown',
+        phone: '+94 74 456 7890',
+        status: 'inactive',
+        lastActive: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+        area: areas[1]._id,
+        currentLocation: {
+          type: 'Point',
+          coordinates: [79.87065509415085, 6.8758554775313955] // Inside Pamankada West
         }
       }
     ];

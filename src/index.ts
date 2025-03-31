@@ -16,6 +16,8 @@ import './models/Collector';
 import './models/Area';
 import './models/Bin';
 import './models/Issue';
+import './models/Schedule';
+import './models/Resident';
 
 dotenv.config();
 
@@ -28,7 +30,7 @@ app.use(express.json());
 app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
-app.use('/api/routes', routeOptimizationRoutes);
+app.use('/api/route-optimization', routeOptimizationRoutes); // Updated path to match frontend
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);

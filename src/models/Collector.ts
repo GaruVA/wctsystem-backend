@@ -5,11 +5,16 @@ export interface ICollector extends Document {
   username: string;
   password: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  status: 'active' | 'on-leave' | 'inactive';
   currentLocation?: {
     type: string;
     coordinates: number[];
   };
   area: Schema.Types.ObjectId;
+  lastActive?: Date;
   createdAt?: Date;
   updatedAt?: Date;
   comparePassword: (password: string) => Promise<boolean>;
@@ -19,6 +24,14 @@ const collectorSchema = new Schema<ICollector>({
 	username: { type: String, required: true, unique: true },
 	password: { type: String, required: true },
 	email: { type: String, required: true, unique: true },
+	firstName: { type: String },
+	lastName: { type: String },
+	phone: { type: String },
+	status: { 
+		type: String, 
+		enum: ['active', 'on-leave', 'inactive'],
+		default: 'active'
+	},
 	currentLocation: {
     type: {
       type: String,
@@ -30,7 +43,8 @@ const collectorSchema = new Schema<ICollector>({
       required: false
     }
   },
-	area: { type: Schema.Types.ObjectId, ref: 'Area' }
+	area: { type: Schema.Types.ObjectId, ref: 'Area' },
+	lastActive: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 // Hash password before saving
