@@ -1,37 +1,251 @@
-import { Request, Response, NextFunction } from 'express';
-import Bin, { IBin } from '../models/Bin';
+import { Request, Response } from 'express';
+import { optimizeRoute, OptimizedRoute } from '../services/routeOptimizationService';
 import Area from '../models/Area';
-import * as routeOptimizationService from '../services/routeOptimizationService';
-import { Document, Types } from 'mongoose';
+import Bin, { IBin } from '../models/Bin';
+import mongoose, { Document } from 'mongoose';
 
-// Add a type definition that includes the _id property
-type BinDocument = IBin & {
-  _id: Types.ObjectId;
-};
-
-interface RouteOptimizationRequest {
-  start: [number, number]; // [longitude, latitude]
-  stops: Array<[number, number]>; // Array of [longitude, latitude]
-  end: [number, number]; // [longitude, latitude] 
+// Helper type to ensure _id property is recognized
+interface BinDocument extends IBin {
+  _id: mongoose.Types.ObjectId;
 }
 
 /**
- * Optimize a collection route (full process)
+ * Generate an optimized route for an area
+ */
+export const getOptimizedRouteForArea = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { areaId } = req.params;
+    const { fillLevelThreshold = 70 } = req.query;
+    
+    // Validate area exists
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
+      return;
+    }
+    
+    // Get all bins for this area that meet the fill level threshold
+    const threshold = Number(fillLevelThreshold);
+    const bins = await Bin.find({
+      area: areaId,
+      fillLevel: { $gte: threshold }
+    });
+    
+    if (bins.length === 0) {
+      res.status(404).json({ message: 'No bins found that meet the fill level threshold' });
+      return;
+    }
+    
+    // Extract bin locations for route optimization
+    const stops: Array<[number, number]> = bins.map(bin => 
+      bin.location.coordinates as [number, number]
+    );
+    
+    // Get start and end points from the area
+    const start = area.startLocation.coordinates as [number, number];
+    const end = area.endLocation.coordinates as [number, number];
+    
+    // Call the optimization service
+    const optimizedRoute: OptimizedRoute = await optimizeRoute(start, stops, end);
+    
+    // Map the bin IDs to the optimized sequence
+    const includedBins = bins.map((bin) => {
+      // Ensure bin._id is treated as string or ObjectId that can be stringified
+      return bin._id.toString();
+    });
+    
+    // Return the complete route optimization response
+    res.json({
+      route: optimizedRoute,
+      totalBins: bins.length,
+      areaId: area._id,
+      areaName: area.name,
+      includedBins: includedBins,
+      fillLevelThreshold: threshold
+    });
+  } catch (error: any) {
+    console.error('Error generating optimized route:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate optimized route', 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Adjust an existing route by including/excluding bins
+ */
+export const adjustExistingRoute = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      areaId, 
+      existingRoute, 
+      includeBins = [], // explicitly included bin IDs
+      excludeBins = [], // explicitly excluded bin IDs
+      binOrder = [] // manually ordered bin IDs
+    } = req.body;
+    
+    // Validate area exists
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
+      return;
+    }
+    
+    // Get fill level threshold from the existing route or default to 70
+    const fillLevelThreshold = existingRoute.fillLevelThreshold || 70;
+    
+    // Get all bins in this area
+    const allBins = await Bin.find({ area: areaId });
+    if (allBins.length === 0) {
+      res.status(404).json({ message: 'No bins found in this area' });
+      return;
+    }
+    
+    // Type guard function to check if a bin has an _id property
+    function hasBinId(bin: any): bin is BinDocument {
+      return bin && bin._id && (typeof bin._id.toString === 'function');
+    }
+    
+    // Determine which bins to include
+    let includedBins: BinDocument[] = [];
+    
+    // First, add all explicitly included bins
+    if (includeBins.length > 0) {
+      const explicitlyIncludedBins = allBins.filter(bin => 
+        hasBinId(bin) && includeBins.includes(bin._id.toString())
+      );
+      includedBins.push(...(explicitlyIncludedBins as BinDocument[]));
+    }
+    
+    // Then, add bins from the existing route that aren't explicitly excluded
+    if (existingRoute.includedBins) {
+      const existingBins = allBins.filter(bin => 
+        hasBinId(bin) && 
+        existingRoute.includedBins.includes(bin._id.toString()) && 
+        !excludeBins.includes(bin._id.toString()) &&
+        !includedBins.some(included => included._id.toString() === bin._id.toString())
+      );
+      includedBins.push(...(existingBins as BinDocument[]));
+    }
+    
+    // Add bins that meet the threshold and aren't explicitly excluded or already included
+    const thresholdBins = allBins.filter(bin => 
+      hasBinId(bin) &&
+      bin.fillLevel >= fillLevelThreshold &&
+      !excludeBins.includes(bin._id.toString()) &&
+      !includedBins.some(included => included._id.toString() === bin._id.toString())
+    );
+    includedBins.push(...(thresholdBins as BinDocument[]));
+    
+    // If no bins to include, return error
+    if (includedBins.length === 0) {
+      res.status(400).json({ message: 'No bins to include in route after applying filters' });
+      return;
+    }
+    
+    // Extract coordinates for route optimization
+    const stops: Array<[number, number]> = includedBins.map(bin => 
+      bin.location.coordinates as [number, number]
+    );
+    
+    // Get start and end points from the area
+    const start = area.startLocation.coordinates as [number, number];
+    const end = area.endLocation.coordinates as [number, number];
+    
+    // Generate map of bin ID to its location to help with reordering
+    const binLocationMap = new Map(
+      includedBins.map(bin => [bin._id.toString(), bin.location.coordinates])
+    );
+    
+    // If a custom bin order is provided, use it to reorder the stops
+    if (binOrder.length > 0 && includedBins.length > 0) {
+      // Get only the bins that are both in binOrder and includedBins
+      const orderedBinIds = binOrder.filter(binId => 
+        includedBins.some(bin => bin._id.toString() === binId)
+      );
+      
+      // If we have valid ordered bins, use that sequence instead of calculating a new route
+      if (orderedBinIds.length > 0) {
+        // Create the ordered sequence of stops based on binOrder
+        const orderedStops = orderedBinIds
+          .map(binId => binLocationMap.get(binId))
+          .filter(Boolean) as Array<[number, number]>;
+          
+        // Extract the bin IDs for response
+        const includedBinIds = includedBins.map(bin => bin._id.toString());
+        
+        // Create a simplified response with the manual order
+        const response = {
+          route: {
+            route: [start, ...orderedStops, end],
+            distance: existingRoute.route.distance,  // Keep existing distance
+            duration: existingRoute.route.duration,  // Keep existing duration
+            steps: existingRoute.route.steps,        // Keep existing steps
+          },
+          totalBins: includedBins.length,
+          areaId: area._id,
+          areaName: area.name,
+          includedBins: includedBinIds,
+          excludedBins: excludeBins,
+          fillLevelThreshold: fillLevelThreshold
+        };
+        
+        res.json(response);
+        return;
+      }
+    }
+    
+    // If no manual ordering or invalid ordering, generate a new optimized route
+    const optimizedRoute: OptimizedRoute = await optimizeRoute(start, stops, end);
+    
+    // Extract the bin IDs for response
+    const includedBinIds = includedBins.map(bin => bin._id.toString());
+    
+    // Return the complete route optimization response
+    res.json({
+      route: optimizedRoute,
+      totalBins: includedBins.length,
+      areaId: area._id,
+      areaName: area.name,
+      includedBins: includedBinIds,
+      excludedBins: excludeBins,
+      fillLevelThreshold: fillLevelThreshold
+    });
+  } catch (error: any) {
+    console.error('Error adjusting route:', error);
+    res.status(500).json({ 
+      message: 'Failed to adjust route', 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Get optimized route for an area
+ */
+export const getOptimizedRoute = async (req: Request, res: Response): Promise<void> => {
+  return getOptimizedRouteForArea(req, res);
+};
+
+/**
+ * Optimize a collection route based on waypoints
+ * Legacy endpoint for backward compatibility
  */
 export const optimizeCollectionRoute = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { start, stops, end } = req.body as RouteOptimizationRequest;
+    const { start, stops, end } = req.body;
     
     // Validate inputs
-    if (!start || !stops || !end || !Array.isArray(stops) || stops.length === 0) {
+    if (!start || !stops || !stops.length || !end) {
       res.status(400).json({
-        message: 'Invalid inputs. Need start, stops, and end coordinates'
+        message: 'Missing required parameters: start, stops, and end coordinates'
       });
       return;
     }
     
     // Call the optimization service
-    const optimizedRoute = await routeOptimizationService.optimizeRoute(start, stops, end);
+    const optimizedRoute = await optimizeRoute(start, stops, end);
     
     res.json(optimizedRoute);
   } catch (error: any) {
@@ -48,7 +262,7 @@ export const optimizeCollectionRoute = async (req: Request, res: Response): Prom
  */
 export const optimizeBinOrder = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { start, stops, end } = req.body as RouteOptimizationRequest;
+    const { start, stops, end } = req.body;
     
     // Validate inputs
     if (!start || !stops || !end || !Array.isArray(stops) || stops.length === 0) {
@@ -58,42 +272,44 @@ export const optimizeBinOrder = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // Call the bin order optimization service only
-    const optimizedOrder = await routeOptimizationService.optimizeBinOrder(start, stops, end);
+    // Import the actual function from service
+    const { optimizeBinOrder: optimizeBinOrderService } = require('../services/routeOptimizationService');
     
-    // Return only the optimized bin order information
-    res.json({
-      optimizedStops: optimizedOrder.optimizedStops,
-      stops_sequence: optimizedOrder.stops_sequence
-    });
+    // Call the bin order optimization service only
+    const optimizedBinOrder = await optimizeBinOrderService(start, stops, end);
+    
+    res.json(optimizedBinOrder);
   } catch (error: any) {
     console.error('Bin order optimization error:', error);
     res.status(500).json({
-      message: 'Failed to optimize bin order',
+      message: 'Failed to optimize bin collection order',
       error: error.message
     });
   }
 };
 
 /**
- * Generate route polyline from ordered waypoints
+ * Generate a route polyline for a set of waypoints
  */
 export const generateRoutePolyline = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { waypoints, stops_sequence } = req.body;
+    const { waypoints, stopsSequence } = req.body;
     
     // Validate inputs
     if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
       res.status(400).json({
-        message: 'Invalid inputs. Need at least 2 waypoints'
+        message: 'Invalid inputs. Need at least two waypoints'
       });
       return;
     }
     
+    // Import the actual function from service
+    const { generateRoutePolyline: generateRoutePolylineService } = require('../services/routeOptimizationService');
+    
     // Call the polyline generation service
-    const routePolyline = await routeOptimizationService.generateRoutePolyline(
+    const routePolyline = await generateRoutePolylineService(
       waypoints, 
-      stops_sequence || []
+      stopsSequence || []
     );
     
     res.json(routePolyline);
@@ -103,124 +319,5 @@ export const generateRoutePolyline = async (req: Request, res: Response): Promis
       message: 'Failed to generate route polyline',
       error: error.message
     });
-  }
-};
-
-/**
- * Get optimized route for a specific area
- */
-export const getOptimizedRoute = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { areaId } = req.params;
-    
-    // Parse query parameters
-    const includeBinIds = req.query.include ? String(req.query.include).split(',') : [];
-    const excludeBinIds = req.query.exclude ? String(req.query.exclude).split(',') : [];
-    const fillLevelThreshold = req.query.threshold ? parseInt(String(req.query.threshold)) : 70;
-
-    console.log(`Route optimization request for area ${areaId}`);
-    console.log(`- Include bin IDs: ${includeBinIds.join(', ') || 'none'}`);
-    console.log(`- Exclude bin IDs: ${excludeBinIds.join(', ') || 'none'}`);
-    console.log(`- Fill level threshold: ${fillLevelThreshold}%`);
-
-    // Get area details including start and end locations
-    const area = await Area.findById(areaId);
-    if (!area) {
-      res.status(404).json({ message: 'Area not found' });
-      return;
-    }
-
-    // Build the query for bins that need collection
-    const binQuery: any = { area: areaId };
-    
-    // Initialize bins to include and exclude
-    let binsToInclude: BinDocument[] = [];
-    let binsToExclude: BinDocument[] = [];
-    
-    // If specific bins are to be included, get them regardless of fill level
-    if (includeBinIds.length > 0) {
-      binsToInclude = await Bin.find({
-        _id: { $in: includeBinIds },
-        area: areaId
-      }) as BinDocument[];
-    }
-    
-    // If specific bins are to be excluded, mark them
-    if (excludeBinIds.length > 0) {
-      binsToExclude = await Bin.find({
-        _id: { $in: excludeBinIds },
-        area: areaId
-      }) as BinDocument[];
-    }
-
-    // Get bins that meet the threshold
-    binQuery.fillLevel = { $gte: fillLevelThreshold };
-    if (excludeBinIds.length > 0) {
-      binQuery._id = { $nin: excludeBinIds }; // Exclude specified bins
-    }
-    
-    const thresholdBins = await Bin.find(binQuery) as BinDocument[];
-    
-    // Combine bins from threshold and specifically included bins
-    let binsSet = new Set<string>();
-    let bins: BinDocument[] = [];
-    
-    // Add threshold bins to the set
-    for (const bin of thresholdBins) {
-      binsSet.add(bin._id.toString());
-      bins.push(bin);
-    }
-    
-    // Add specifically included bins if not already in the set
-    for (const bin of binsToInclude) {
-      if (!binsSet.has(bin._id.toString())) {
-        binsSet.add(bin._id.toString());
-        bins.push(bin);
-      }
-    }
-    
-    // If no bins need collection, return empty route
-    if (bins.length === 0) {
-      res.status(200).json({
-        message: 'No bins need collection in this area',
-        route: [],
-        startLocation: area.startLocation.coordinates,
-        endLocation: area.endLocation.coordinates,
-        totalBins: 0
-      });
-      return;
-    }
-
-    console.log(`Found ${bins.length} bins to include in route optimization`);
-
-    // Extract bin locations for optimization and ensure they are properly typed as [number, number]
-    const binLocations = bins.map(bin => {
-      // Ensure we have a proper [longitude, latitude] tuple
-      const [longitude, latitude] = bin.location.coordinates;
-      return [longitude, latitude] as [number, number];
-    });
-
-    // Ensure start and end locations are also properly typed
-    const startCoords = area.startLocation.coordinates as [number, number];
-    const endCoords = area.endLocation.coordinates as [number, number];
-
-    // Optimize route using the service function
-    const optimizedRoute = await routeOptimizationService.optimizeRoute(
-      startCoords,     // Start from area's start location
-      binLocations,    // Visit bins that need collection
-      endCoords        // End at area's end location
-    );
-
-    res.status(200).json({
-      route: optimizedRoute,
-      startLocation: area.startLocation.coordinates,
-      endLocation: area.endLocation.coordinates,
-      totalBins: bins.length,
-      includedBins: binsToInclude.map(bin => bin._id.toString()),
-      excludedBins: binsToExclude.map(bin => bin._id.toString())
-    });
-  } catch (error) {
-    console.error('[Route Optimization] Error:', error);
-    res.status(500).json({ message: 'Failed to calculate optimized route.' });
   }
 };

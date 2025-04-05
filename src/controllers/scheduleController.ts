@@ -52,7 +52,7 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
         coordinates: route.coordinates,
         distance: route.distance || '0 km',
         duration: route.duration || '0 min',
-        includedBins: route.bins || [],
+        includedBins: route.includedBins || route.bins || [], // Use includedBins or fallback to bins array
         excludedBins: route.excludedBins || [],
         fillLevelThreshold: route.fillLevelThreshold || 70
       }

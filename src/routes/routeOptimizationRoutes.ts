@@ -1,5 +1,5 @@
 import express from 'express';
-import { optimizeCollectionRoute, optimizeBinOrder, generateRoutePolyline, getOptimizedRoute } from '../controllers/routeOptimizationController';
+import { optimizeCollectionRoute, optimizeBinOrder, generateRoutePolyline, getOptimizedRouteForArea, adjustExistingRoute } from '../controllers/routeOptimizationController';
 import { auth, requireRole } from '../middleware/auth';
 
 const router = express.Router();
@@ -11,7 +11,10 @@ router.post('/optimize', auth, requireRole('collector'), optimizeCollectionRoute
 router.post('/optimize-bin-order', auth, requireRole('collector'), optimizeBinOrder);
 router.post('/generate-polyline', auth, requireRole('collector'), generateRoutePolyline);
 
-// Area-specific route optimization (this was missing)
-router.get('/area/:areaId', auth, getOptimizedRoute);
+// Area-specific route optimization
+router.get('/area/:areaId', auth, getOptimizedRouteForArea);
+
+// Route adjustment endpoint
+router.post('/adjust-existing', auth, requireRole('admin'), adjustExistingRoute);
 
 export default router;
