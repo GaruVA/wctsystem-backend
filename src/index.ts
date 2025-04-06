@@ -17,6 +17,7 @@ import './models/Area';
 import './models/Bin';
 import './models/Issue';
 import './models/Schedule';
+import './models/Route'; // Add the Route model
 
 dotenv.config();
 

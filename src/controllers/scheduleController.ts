@@ -49,7 +49,7 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
       distance: route.distance || '0 km',
       duration: route.duration || '0 min',
       fillLevelThreshold: route.fillLevelThreshold || 70,
-      areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId
+      areaId: areaId as unknown as Schema.Types.ObjectId
     };
 
     const newRoute = new Route(routeData);
@@ -58,7 +58,7 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
     // Then create the schedule with a reference to the route
     const scheduleData: Partial<ISchedule> = {
       name,
-      areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId,
+      areaId: areaId as unknown as Schema.Types.ObjectId,
       routeId: newRoute._id as Schema.Types.ObjectId,
       date: new Date(date),
       status: status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled'
@@ -66,7 +66,7 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
 
     // Add optional fields if provided
     if (collectorId) {
-      scheduleData.collectorId = new mongoose.Types.ObjectId(collectorId) as unknown as Schema.Types.ObjectId;
+      scheduleData.collectorId = collectorId as unknown as Schema.Types.ObjectId;
     }
     
     if (startTime) {
@@ -237,7 +237,7 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
     // Update schedule fields if provided
     if (name) schedule.name = name;
     if (collectorId) {
-      schedule.collectorId = new mongoose.Types.ObjectId(collectorId) as unknown as Schema.Types.ObjectId;
+      schedule.collectorId = collectorId as unknown as Schema.Types.ObjectId;
     }
     if (date) schedule.date = new Date(date);
     if (startTime) schedule.startTime = new Date(startTime);
