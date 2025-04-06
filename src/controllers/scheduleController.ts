@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Schedule, { ISchedule } from '../models/Schedule';
+import Route, { IRoute } from '../models/Route';
 import Area from '../models/Area';
 import Collector from '../models/Collector';
 import mongoose, { Schema } from 'mongoose';
@@ -42,20 +43,25 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    // Create schedule with parsed date
+    // First create the route
+    const routeData: Partial<IRoute> = {
+      coordinates: route.coordinates,
+      distance: route.distance || '0 km',
+      duration: route.duration || '0 min',
+      fillLevelThreshold: route.fillLevelThreshold || 70,
+      areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId
+    };
+
+    const newRoute = new Route(routeData);
+    await newRoute.save();
+
+    // Then create the schedule with a reference to the route
     const scheduleData: Partial<ISchedule> = {
       name,
       areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId,
+      routeId: newRoute._id as Schema.Types.ObjectId,
       date: new Date(date),
-      status: status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
-      route: {
-        coordinates: route.coordinates,
-        distance: route.distance || '0 km',
-        duration: route.duration || '0 min',
-        includedBins: route.includedBins || route.bins || [], // Use includedBins or fallback to bins array
-        excludedBins: route.excludedBins || [],
-        fillLevelThreshold: route.fillLevelThreshold || 70
-      }
+      status: status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled'
     };
 
     // Add optional fields if provided
@@ -75,7 +81,10 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
 
-    res.status(201).json(newSchedule);
+    res.status(201).json({
+      ...newSchedule.toObject(),
+      route: newRoute.toObject()
+    });
   } catch (error: any) {
     console.error('Error creating schedule:', error);
     res.status(500).json({ 
@@ -129,12 +138,13 @@ export const getSchedules = async (req: Request, res: Response): Promise<void> =
     // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit);
     
-    // Get schedules with pagination
+    // Get schedules with pagination - now populate routeId too
     const schedules = await Schedule.find(query)
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
       .populate('areaId', 'name')
+      .populate('routeId')
       .populate('collectorId', 'firstName lastName');
     
     // Get total count for pagination
@@ -167,6 +177,7 @@ export const getScheduleById = async (req: Request, res: Response): Promise<void
     
     const schedule = await Schedule.findById(id)
       .populate('areaId', 'name geometry startLocation endLocation')
+      .populate('routeId')
       .populate('collectorId', 'firstName lastName email phone');
     
     if (!schedule) {
@@ -196,7 +207,8 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
       date,
       startTime,
       endTime,
-      status
+      status,
+      route
     } = req.body;
 
     // Find the schedule
@@ -206,7 +218,23 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Update fields if provided
+    // Update route if provided
+    if (route) {
+      const routeDoc = await Route.findById(schedule.routeId);
+      if (!routeDoc) {
+        res.status(404).json({ message: 'Route not found' });
+        return;
+      }
+      
+      if (route.coordinates) routeDoc.coordinates = route.coordinates;
+      if (route.distance) routeDoc.distance = route.distance;
+      if (route.duration) routeDoc.duration = route.duration;
+      if (route.fillLevelThreshold) routeDoc.fillLevelThreshold = route.fillLevelThreshold;
+      
+      await routeDoc.save();
+    }
+
+    // Update schedule fields if provided
     if (name) schedule.name = name;
     if (collectorId) {
       schedule.collectorId = new mongoose.Types.ObjectId(collectorId) as unknown as Schema.Types.ObjectId;
@@ -219,7 +247,13 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
     // Save updated schedule
     await schedule.save();
     
-    res.json(schedule);
+    // Return the updated schedule with its route
+    const updatedSchedule = await Schedule.findById(id)
+      .populate('routeId')
+      .populate('areaId', 'name')
+      .populate('collectorId', 'firstName lastName');
+      
+    res.json(updatedSchedule);
   } catch (error: any) {
     console.error('Error updating schedule:', error);
     res.status(500).json({ 
@@ -236,14 +270,21 @@ export const deleteSchedule = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
     
-    const schedule = await Schedule.findByIdAndDelete(id);
-    
+    const schedule = await Schedule.findById(id);
     if (!schedule) {
       res.status(404).json({ message: 'Schedule not found' });
       return;
     }
     
-    res.json({ message: 'Schedule deleted successfully' });
+    // Delete the associated route as well
+    if (schedule.routeId) {
+      await Route.findByIdAndDelete(schedule.routeId);
+    }
+    
+    // Delete the schedule
+    await Schedule.findByIdAndDelete(id);
+    
+    res.json({ message: 'Schedule and associated route deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting schedule:', error);
     res.status(500).json({ 
