@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import Bin from '../models/Bin';
+import Area from '../models/Area';
+import Collector from '../models/Collector';
+import Schedule from '../models/Schedule';
 
 export const getFillLevelTrends = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -129,6 +132,76 @@ export const getAnalyticsByWasteType = async (req: Request, res: Response): Prom
     res.json(wasteTypeAnalytics);
   } catch (error) {
     console.error('Error fetching waste type analytics:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAreaStatusOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get all areas
+    const areas = await Area.find().select('name');
+
+    // Get status data for each area
+    const areaStatusPromises = areas.map(async (area) => {
+      // Get bins in this area
+      const bins = await Bin.find({ area: area._id }).select('fillLevel wasteTypes');
+      
+      // Calculate average fill level
+      const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
+      const averageFillLevel = bins.length > 0 ? totalFillLevel / bins.length : 0;
+      
+      // Count critical bins (> 80% full)
+      const criticalBins = bins.filter(bin => bin.fillLevel > 80).length;
+      
+      // Count bins by waste type
+      const wasteTypeCounts: Record<string, number> = {};
+      bins.forEach(bin => {
+        const wasteType = bin.wasteTypes;
+        wasteTypeCounts[wasteType] = (wasteTypeCounts[wasteType] || 0) + 1;
+      });
+      
+      // Get collectors in this area
+      const collectors = await Collector.find({ area: area._id }).select('status');
+      const activeCollectors = collectors.filter(collector => collector.status === 'active').length;
+      
+      // Get scheduled collections for this area (for the next 24 hours)
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const schedules = await Schedule.find({
+        areaId: area._id,
+        date: { $gte: now, $lt: tomorrow },
+        status: { $in: ['scheduled', 'in-progress'] }
+      });
+      
+      // Calculate status
+      let status: 'critical' | 'warning' | 'normal' = 'normal';
+      if (criticalBins > 5 || averageFillLevel > 75) {
+        status = 'critical';
+      } else if (criticalBins > 2 || averageFillLevel > 60) {
+        status = 'warning';
+      }
+      
+      return {
+        _id: area._id,
+        name: area.name,
+        binCount: bins.length,
+        averageFillLevel,
+        criticalBins,
+        wasteTypeCounts,
+        activeCollectors,
+        scheduledCollections: schedules.length,
+        status
+      };
+    });
+    
+    // Wait for all area status data to be collected
+    const areaStatusData = await Promise.all(areaStatusPromises);
+    
+    res.json(areaStatusData);
+  } catch (error) {
+    console.error('Error fetching area status overview:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
