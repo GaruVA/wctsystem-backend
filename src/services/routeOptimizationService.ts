@@ -277,9 +277,12 @@ function optimizeWithNearestNeighbor(
     remaining.splice(closestIndex, 1);
   }
   
-  // Add distance to end point
-  totalDistance += calculateDistance(currentPoint, end);
+  // Add the distance to the end point from the last stop
+  if (optimizedStops.length > 0) {
+    totalDistance += calculateDistance(optimizedStops[optimizedStops.length - 1], end);
+  }
   
+  // Return the optimized data
   return {
     optimizedStops,
     stops_sequence,
