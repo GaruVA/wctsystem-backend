@@ -5,7 +5,6 @@ import connectDB from './config/database';
 import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
-import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import areaRoutes from './routes/areaRoutes';
 import residentRoutes from './routes/residentRoutes';
@@ -18,6 +17,7 @@ import './models/Bin';
 import './models/Issue';
 import './models/Schedule';
 import './models/Resident';
+import './models/Route';
 
 dotenv.config();
 
@@ -30,7 +30,6 @@ app.use(express.json());
 app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
-app.use('/api/route-optimization', routeOptimizationRoutes); // Updated path to match frontend
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);

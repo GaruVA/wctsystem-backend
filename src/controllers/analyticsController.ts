@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
 import Bin from '../models/Bin';
+import Area from '../models/Area';
+import Collector from '../models/Collector';
+import Schedule from '../models/Schedule';
 
 export const getFillLevelTrends = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel area lastCollected').populate('area', 'name');
+    const bins = await Bin.find().select('fillLevel area lastCollected wasteTypes').populate('area', 'name');
     const trends = bins.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
       if (!acc[areaName]) {
@@ -11,10 +14,11 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
       }
       acc[areaName].push({
         fillLevel: bin.fillLevel,
-        lastCollected: bin.lastCollected
+        lastCollected: bin.lastCollected,
+        wasteTypes: bin.wasteTypes
       });
       return acc;
-    }, {} as Record<string, { fillLevel: number; lastCollected: Date }[]>);
+    }, {} as Record<string, { fillLevel: number; lastCollected: Date; wasteTypes: string }[]>);
 
     res.json(trends);
   } catch (error) {
@@ -25,9 +29,14 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
 
 export const getAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel area lastCollected').populate('area', 'name');
+    const bins = await Bin.find().select('fillLevel area lastCollected wasteTypes').populate('area', 'name');
+    
+    // Group analytics by both area and waste type
     const analytics = bins.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
+      const wasteType = bin.wasteTypes;
+      
+      // Create area if it doesn't exist
       if (!acc[areaName]) {
         acc[areaName] = {
           utilization: 0,
@@ -36,9 +45,18 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
           bins: 0,
           totalFillLevel: 0,
           totalCollections: 0,
-          totalServiceDelay: 0
+          totalServiceDelay: 0,
+          wasteTypeDistribution: {}
         };
       }
+      
+      // Update waste type distribution
+      if (!acc[areaName].wasteTypeDistribution[wasteType]) {
+        acc[areaName].wasteTypeDistribution[wasteType] = 0;
+      }
+      acc[areaName].wasteTypeDistribution[wasteType]++;
+      
+      // Update general analytics
       acc[areaName].totalFillLevel += bin.fillLevel;
       acc[areaName].bins += 1;
       if (bin.lastCollected) {
@@ -47,7 +65,16 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
         acc[areaName].totalServiceDelay += timeSinceLastCollection;
       }
       return acc;
-    }, {} as Record<string, { utilization: number; collectionEfficiency: number; serviceDelay: number; bins: number; totalFillLevel: number; totalCollections: number; totalServiceDelay: number }>);
+    }, {} as Record<string, { 
+      utilization: number; 
+      collectionEfficiency: number; 
+      serviceDelay: number; 
+      bins: number; 
+      totalFillLevel: number; 
+      totalCollections: number; 
+      totalServiceDelay: number;
+      wasteTypeDistribution: Record<string, number>;
+    }>);
 
     // Calculate averages
     for (const areaName in analytics) {
@@ -60,6 +87,121 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
     res.json(analytics);
   } catch (error) {
     console.error('Error fetching analytics:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAnalyticsByWasteType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const bins = await Bin.find().select('fillLevel wasteTypes lastCollected');
+    
+    // Group bins by waste type
+    const wasteTypeAnalytics = bins.reduce((acc, bin) => {
+      const wasteType = bin.wasteTypes;
+      
+      if (!acc[wasteType]) {
+        acc[wasteType] = {
+          count: 0,
+          averageFillLevel: 0,
+          totalFillLevel: 0,
+          needsCollection: 0 // Bins with fill level > 70%
+        };
+      }
+      
+      acc[wasteType].count++;
+      acc[wasteType].totalFillLevel += bin.fillLevel;
+      
+      if (bin.fillLevel > 70) {
+        acc[wasteType].needsCollection++;
+      }
+      
+      return acc;
+    }, {} as Record<string, {
+      count: number;
+      averageFillLevel: number;
+      totalFillLevel: number;
+      needsCollection: number;
+    }>);
+    
+    // Calculate averages
+    for (const wasteType in wasteTypeAnalytics) {
+      const data = wasteTypeAnalytics[wasteType];
+      data.averageFillLevel = data.totalFillLevel / data.count;
+    }
+    
+    res.json(wasteTypeAnalytics);
+  } catch (error) {
+    console.error('Error fetching waste type analytics:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAreaStatusOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get all areas
+    const areas = await Area.find().select('name');
+
+    // Get status data for each area
+    const areaStatusPromises = areas.map(async (area) => {
+      // Get bins in this area
+      const bins = await Bin.find({ area: area._id }).select('fillLevel wasteTypes');
+      
+      // Calculate average fill level
+      const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
+      const averageFillLevel = bins.length > 0 ? totalFillLevel / bins.length : 0;
+      
+      // Count critical bins (> 80% full)
+      const criticalBins = bins.filter(bin => bin.fillLevel > 80).length;
+      
+      // Count bins by waste type
+      const wasteTypeCounts: Record<string, number> = {};
+      bins.forEach(bin => {
+        const wasteType = bin.wasteTypes;
+        wasteTypeCounts[wasteType] = (wasteTypeCounts[wasteType] || 0) + 1;
+      });
+      
+      // Get collectors in this area
+      const collectors = await Collector.find({ area: area._id }).select('status');
+      const activeCollectors = collectors.filter(collector => collector.status === 'active').length;
+      
+      // Get scheduled collections for this area (for the next 24 hours)
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const schedules = await Schedule.find({
+        areaId: area._id,
+        date: { $gte: now, $lt: tomorrow },
+        status: { $in: ['scheduled', 'in-progress'] }
+      });
+      
+      // Calculate status
+      let status: 'critical' | 'warning' | 'normal' = 'normal';
+      if (criticalBins > 5 || averageFillLevel > 75) {
+        status = 'critical';
+      } else if (criticalBins > 2 || averageFillLevel > 60) {
+        status = 'warning';
+      }
+      
+      return {
+        _id: area._id,
+        name: area.name,
+        binCount: bins.length,
+        averageFillLevel,
+        criticalBins,
+        wasteTypeCounts,
+        activeCollectors,
+        scheduledCollections: schedules.length,
+        status
+      };
+    });
+    
+    // Wait for all area status data to be collected
+    const areaStatusData = await Promise.all(areaStatusPromises);
+    
+    res.json(areaStatusData);
+  } catch (error) {
+    console.error('Error fetching area status overview:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

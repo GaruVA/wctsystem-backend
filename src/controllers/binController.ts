@@ -6,12 +6,12 @@ import Area from '../models/Area'; // Import the Area model
 
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { bin_id, fill_level, latitude, longitude, timestamp } = req.body;
+    const { bin_id, fill_level, latitude, longitude, timestamp, wasteTypes } = req.body;
 
     try {
         const updatedBin = await Bin.findOneAndUpdate(
             { bin_id },
-            { fill_level, latitude, longitude, timestamp },
+            { fill_level, latitude, longitude, timestamp, wasteTypes },
             { new: true, upsert: true }
         );
         res.status(200).json(updatedBin);
@@ -27,7 +27,7 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
 export const updateBinFillLevel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { binId } = req.params;
-    const { fillLevel, lastCollected } = req.body;
+    const { fillLevel, lastCollected, wasteTypes } = req.body;
     
     console.log(`[Backend] Updating fill level for bin ${binId} to ${fillLevel}%`);
     
@@ -35,6 +35,9 @@ export const updateBinFillLevel = async (req: Request, res: Response, next: Next
     const updateData: any = { fillLevel };
     if (lastCollected) {
       updateData.lastCollected = new Date(lastCollected);
+    }
+    if (wasteTypes) {
+      updateData.wasteTypes = wasteTypes;
     }
     
     // Find the bin by ID and update its fill level
@@ -96,7 +99,7 @@ export const directUpdateBin = async (req: Request, res: Response): Promise<void
 
 // Add new function to create bins
 export const createBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { bin_id, latitude, longitude } = req.body;
+    const { bin_id, latitude, longitude, wasteTypes } = req.body;
 
     try {
         const newBin = new Bin({
@@ -104,7 +107,8 @@ export const createBin = async (req: Request, res: Response, next: NextFunction)
             fill_level: 0, // Initialize empty
             latitude,
             longitude,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            wasteTypes: wasteTypes || 'GENERAL' // Default to GENERAL if not specified
         });
 
         await newBin.save();
@@ -132,7 +136,7 @@ export const getBins = async (req: Request, res: Response, next: NextFunction): 
 export const getBinDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { binId } = req.params;
-    const bin = await Bin.findById(binId).select('location fillLevel lastCollected');
+    const bin = await Bin.findById(binId).select('location fillLevel lastCollected wasteTypes');
     if (!bin) {
       res.status(404).json({ message: 'Bin not found' });
       return;
@@ -143,7 +147,8 @@ export const getBinDetails = async (req: Request, res: Response, next: NextFunct
       location: bin.location,
       fillLevel: bin.fillLevel,
       lastCollected: bin.lastCollected,
-      status: "normal"
+      status: "normal",
+      wasteTypes: bin.wasteTypes
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch bin details.' });
@@ -166,7 +171,7 @@ export const collectBin = async (req: Request, res: Response, next: NextFunction
         lastCollected: new Date() 
       },
       { new: true, runValidators: true }
-    ).select('location fillLevel lastCollected');
+    ).select('location fillLevel lastCollected wasteTypes');
 
     if (!updatedBin) {
       console.log(`[Backend] Bin ${binId} not found`);
@@ -181,7 +186,8 @@ export const collectBin = async (req: Request, res: Response, next: NextFunction
         _id: updatedBin._id,
         location: updatedBin.location,
         fillLevel: updatedBin.fillLevel,
-        lastCollected: updatedBin.lastCollected
+        lastCollected: updatedBin.lastCollected,
+        wasteTypes: updatedBin.wasteTypes
       }
     });
   } catch (error) {
@@ -235,5 +241,59 @@ export const assignBinToArea = async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('Error assigning bin to area:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Add a new function to update a bin's waste type
+export const updateBinWasteType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    const { wasteTypes } = req.body;
+    
+    console.log(`[Backend] Updating waste type for bin ${binId} to ${wasteTypes}`);
+    
+    if (!['GENERAL', 'ORGANIC', 'HAZARDOUS', 'RECYCLE'].includes(wasteTypes)) {
+      res.status(400).json({ message: 'Invalid waste type. Must be one of: GENERAL, ORGANIC, HAZARDOUS, RECYCLE' });
+      return;
+    }
+    
+    const updatedBin = await Bin.findByIdAndUpdate(
+      binId,
+      { wasteTypes },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedBin) {
+      console.log(`[Backend] Bin ${binId} not found for waste type update`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+
+    console.log(`[Backend] Successfully updated bin ${binId} waste type to ${wasteTypes}`);
+    res.status(200).json({
+      success: true,
+      bin: updatedBin
+    });
+  } catch (error) {
+    console.error('[Backend] Error updating bin waste type:', error);
+    res.status(500).json({ message: 'Failed to update bin waste type.' });
+  }
+};
+
+// Add a function to filter bins by waste type
+export const getBinsByWasteType = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { wasteType } = req.params;
+    
+    if (!['GENERAL', 'ORGANIC', 'HAZARDOUS', 'RECYCLE'].includes(wasteType)) {
+      res.status(400).json({ message: 'Invalid waste type. Must be one of: GENERAL, ORGANIC, HAZARDOUS, RECYCLE' });
+      return;
+    }
+    
+    const bins = await Bin.find({ wasteTypes: wasteType });
+    res.status(200).json(bins);
+  } catch (error) {
+    console.error('[Backend] Error fetching bins by waste type:', error);
+    res.status(500).json({ message: 'Failed to fetch bins by waste type.' });
   }
 };

@@ -52,8 +52,8 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // Get bins in this area
-    const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location') as IBin[];
+    // Get bins in this area - include wasteTypes in selection
+    const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location wasteTypes') as IBin[];
     
     // Map bins and add address to each bin
     const mappedBinsPromises = bins.map(async bin => {
@@ -65,6 +65,7 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
         location: bin.location,
         fillLevel: bin.fillLevel,
         lastCollected: bin.lastCollected,
+        wasteTypes: bin.wasteTypes,
         address // Add address to bin data
       };
     });

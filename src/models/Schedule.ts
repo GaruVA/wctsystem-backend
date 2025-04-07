@@ -4,18 +4,11 @@ export interface ISchedule extends Document {
   name: string;
   areaId: Schema.Types.ObjectId;
   collectorId?: Schema.Types.ObjectId;
+  routeId: Schema.Types.ObjectId;
   date: Date;
   startTime?: Date;
   endTime?: Date;
   status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
-  route: {
-    coordinates: Array<[number, number]>;
-    distance: string;
-    duration: string;
-    includedBins: Schema.Types.ObjectId[];
-    excludedBins: Schema.Types.ObjectId[];
-    fillLevelThreshold: number;
-  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +27,11 @@ const scheduleSchema = new Schema<ISchedule>({
     type: Schema.Types.ObjectId, 
     ref: 'Collector' 
   },
+  routeId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Route',
+    required: true
+  },
   date: { 
     type: Date, 
     required: true 
@@ -48,34 +46,6 @@ const scheduleSchema = new Schema<ISchedule>({
     type: String, 
     enum: ['scheduled', 'in-progress', 'completed', 'cancelled'], 
     default: 'scheduled' 
-  },
-  route: {
-    coordinates: {
-      type: [[Number]],  // Array of [longitude, latitude] coordinates
-      required: true
-    },
-    distance: {
-      type: String,
-      required: true
-    },
-    duration: {
-      type: String,
-      required: true
-    },
-    includedBins: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Bin'
-    }],
-    excludedBins: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Bin'
-    }],
-    fillLevelThreshold: {
-      type: Number,
-      default: 70,
-      min: 0,
-      max: 100
-    }
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt automatically
@@ -85,5 +55,6 @@ const scheduleSchema = new Schema<ISchedule>({
 scheduleSchema.index({ areaId: 1, date: 1 });
 scheduleSchema.index({ collectorId: 1, status: 1 });
 scheduleSchema.index({ date: 1, status: 1 });
+scheduleSchema.index({ routeId: 1 });
 
 export default model<ISchedule>('Schedule', scheduleSchema);
