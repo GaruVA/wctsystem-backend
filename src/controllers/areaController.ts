@@ -44,9 +44,56 @@ export const addArea = async (req: Request, res: Response): Promise<void> => {
 
 export const removeArea = async (req: Request, res: Response): Promise<void> => {
   const { areaId } = req.params;
+  const { reassignToAreaId } = req.body;
+
   try {
+    // Check if the area exists
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
+      return;
+    }
+
+    // If reassignment area is provided, make sure it exists
+    if (reassignToAreaId) {
+      const reassignArea = await Area.findById(reassignToAreaId);
+      if (!reassignArea) {
+        res.status(400).json({ message: 'Reassignment area not found' });
+        return;
+      }
+
+      // Update all bins in this area to the new area
+      const binsUpdateResult = await Bin.updateMany(
+        { area: areaId },
+        { $set: { area: reassignToAreaId } }
+      );
+      
+      // Update all collectors assigned to this area to the new area
+      const collectorsUpdateResult = await Collector.updateMany(
+        { area: areaId },
+        { $set: { area: reassignToAreaId } }
+      );
+      
+      console.log(`Reassigned ${binsUpdateResult.modifiedCount} bins and ${collectorsUpdateResult.modifiedCount} collectors to area ${reassignArea.name}`);
+    } else {
+      // If no reassignment area, count affected resources
+      const binsCount = await Bin.countDocuments({ area: areaId });
+      const collectorsCount = await Collector.countDocuments({ area: areaId });
+      
+      // Set affected bins and collectors to null area
+      await Bin.updateMany({ area: areaId }, { $unset: { area: "" } });
+      await Collector.updateMany({ area: areaId }, { $unset: { area: "" } });
+      
+      console.log(`Removed area assignment from ${binsCount} bins and ${collectorsCount} collectors`);
+    }
+
+    // Delete the area
     await Area.findByIdAndDelete(areaId);
-    res.status(200).json({ message: 'Area removed successfully' });
+    
+    res.status(200).json({ 
+      message: 'Area removed successfully',
+      reassigned: reassignToAreaId ? true : false
+    });
   } catch (error) {
     console.error('Error removing area:', error);
     res.status(500).json({ message: 'Server error' });
@@ -82,40 +129,43 @@ export const getAreaDetails = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// Create a new area with boundary, start and end locations
-export const createArea = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { name, geometry, startLocation, endLocation } = req.body;
-    
-    const newArea = new Area({
-      name,
-      geometry,
-      startLocation,
-      endLocation
-    });
-    
-    await newArea.save();
-    res.status(201).json({ message: 'Area created successfully', area: newArea });
-  } catch (error) {
-    console.error('[Area Controller] Error creating area:', error);
-    res.status(500).json({ message: 'Failed to create area.' });
-  }
-};
-
 // Update an existing area
-export const updateArea = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const updateArea = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { areaId } = req.params;
+    // Area ID can come from params or body, added support for both
+    const areaId = req.params.areaId || req.body.areaId;
+    
+    if (!areaId) {
+      res.status(400).json({ message: 'Area ID is required' });
+      return;
+    }
+    
     const { name, geometry, startLocation, endLocation } = req.body;
+    
+    // Validate required fields
+    if (!name) {
+      res.status(400).json({ message: 'Area name is required' });
+      return;
+    }
+    
+    // Build update object with only provided fields
+    const updateData: any = { name };
+    
+    if (geometry && geometry.coordinates) {
+      updateData.geometry = geometry;
+    }
+    
+    if (startLocation && startLocation.coordinates) {
+      updateData.startLocation = startLocation;
+    }
+    
+    if (endLocation && endLocation.coordinates) {
+      updateData.endLocation = endLocation;
+    }
     
     const updatedArea = await Area.findByIdAndUpdate(
       areaId,
-      {
-        name,
-        geometry,
-        startLocation,
-        endLocation
-      },
+      updateData,
       { new: true, runValidators: true }
     );
     
@@ -124,10 +174,14 @@ export const updateArea = async (req: Request, res: Response, next: NextFunction
       return;
     }
     
-    res.status(200).json({ message: 'Area updated successfully', area: updatedArea });
+    console.log(`Area ${updatedArea.name} updated successfully`);
+    res.status(200).json({ 
+      message: 'Area updated successfully', 
+      area: updatedArea 
+    });
   } catch (error) {
-    console.error('[Area Controller] Error updating area:', error);
-    res.status(500).json({ message: 'Failed to update area.' });
+    console.error('Error updating area:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
