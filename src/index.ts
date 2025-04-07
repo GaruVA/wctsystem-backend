@@ -7,7 +7,7 @@ import adminRoutes from './routes/adminRoutes';
 import collectorRoutes from './routes/collectorRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import areaRoutes from './routes/areaRoutes';
-import scheduleRoutes from './routes/scheduleRoutes';
+import residentRoutes from './routes/residentRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -16,7 +16,8 @@ import './models/Area';
 import './models/Bin';
 import './models/Issue';
 import './models/Schedule';
-import './models/Route'; // Add the Route model
+import './models/Resident';
+import './models/Route';
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
-app.use('/api/schedules', scheduleRoutes); // Added schedule routes
+app.use('/api/resident', residentRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
