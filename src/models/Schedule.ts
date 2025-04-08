@@ -4,11 +4,17 @@ export interface ISchedule extends Document {
   name: string;
   areaId: Schema.Types.ObjectId;
   collectorId?: Schema.Types.ObjectId;
-  routeId: Schema.Types.ObjectId;
   date: Date;
   startTime?: Date;
   endTime?: Date;
   status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  route: Array<[number, number]>;
+  distance: number;
+  duration: number;
+  binSequence: Schema.Types.ObjectId[]; // Ordered sequence of bin IDs
+  actualStartTime?: Date;
+  actualEndTime?: Date;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,11 +33,6 @@ const scheduleSchema = new Schema<ISchedule>({
     type: Schema.Types.ObjectId, 
     ref: 'Collector' 
   },
-  routeId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Route',
-    required: true
-  },
   date: { 
     type: Date, 
     required: true 
@@ -46,6 +47,39 @@ const scheduleSchema = new Schema<ISchedule>({
     type: String, 
     enum: ['scheduled', 'in-progress', 'completed', 'cancelled'], 
     default: 'scheduled' 
+  },
+  // Route data fields
+  route: {
+    type: [[Number]],  // Array of [longitude, latitude] coordinates
+    required: true,
+    description: 'The path coordinates for the collection route'
+  },
+  distance: {
+    type: Number,
+    required: true,
+    description: 'Total distance in kilometers'
+  },
+  duration: {
+    type: Number,
+    required: true,
+    description: 'Total duration in minutes'
+  },
+  binSequence: {
+    type: [Schema.Types.ObjectId],
+    ref: 'Bin',
+    required: true,
+    description: 'Ordered sequence of bins to be collected'
+  },
+  // Additional tracking fields
+  actualStartTime: { 
+    type: Date 
+  },
+  actualEndTime: { 
+    type: Date 
+  },
+  notes: {
+    type: String,
+    description: 'Any special instructions or notes for this collection'
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt automatically
@@ -55,6 +89,5 @@ const scheduleSchema = new Schema<ISchedule>({
 scheduleSchema.index({ areaId: 1, date: 1 });
 scheduleSchema.index({ collectorId: 1, status: 1 });
 scheduleSchema.index({ date: 1, status: 1 });
-scheduleSchema.index({ routeId: 1 });
 
 export default model<ISchedule>('Schedule', scheduleSchema);
