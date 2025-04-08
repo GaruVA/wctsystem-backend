@@ -347,24 +347,28 @@ export const createRouteAssignment = async (req: Request, res: Response): Promis
       collectorId,
       date,
       startTime,
-      binIds,
-      routeData,
-      notes
+      endTime,
+      status = 'scheduled',
+      notes,
+      route,
+      distance,
+      duration,
+      binSequence
     } = req.body;
-    
+
     // Validate required fields
-    if (!name || !areaId || !date || !binIds || !Array.isArray(binIds) || binIds.length === 0) {
-      res.status(400).json({ message: 'Missing required fields for route assignment' });
+    if (!name || !areaId || !date || !route) {
+      res.status(400).json({ message: 'Missing required fields' });
       return;
     }
-    
+
     // Validate area exists
     const area = await Area.findById(areaId);
     if (!area) {
       res.status(404).json({ message: 'Area not found' });
       return;
     }
-    
+
     // Validate collector if provided
     if (collectorId) {
       const collector = await Collector.findById(collectorId);
@@ -373,126 +377,46 @@ export const createRouteAssignment = async (req: Request, res: Response): Promis
         return;
       }
     }
-    
-    // Check that all bins exist and are in the specified area
-    const bins = await Bin.find({
-      _id: { $in: binIds },
-      area: areaId
-    }).select('location') as IBin[];
-    
-    if (bins.length !== binIds.length) {
-      res.status(400).json({ 
-        message: 'Some bins were not found or are not in the specified area',
-        found: bins.length,
-        requested: binIds.length
-      });
-      return;
-    }
-    
-    // Get route data - either use provided routeData or generate it
-    let routeCoordinates, routeDistance, routeDuration;
-    
-    if (routeData && routeData.coordinates && routeData.distance && routeData.duration) {
-      // Use provided route data
-      routeCoordinates = routeData.coordinates;
-      routeDistance = routeData.distance;
-      routeDuration = routeData.duration;
-    } else {
-      // Generate route using bins' coordinates and area's start/end locations
-      const startLocation = area.startLocation?.coordinates;
-      const endLocation = area.endLocation?.coordinates || startLocation;
-      
-      if (!startLocation) {
-        res.status(400).json({ message: 'Area does not have a valid start location' });
-        return;
-      }
-      
-      // Extract bin coordinates in the order they were provided
-      const binMap = new Map<string, [number, number]>();
-      bins.forEach(bin => {
-        binMap.set((bin._id as mongoose.Types.ObjectId).toString(), bin.location.coordinates as [number, number]);
-      });
-      
-      const orderedCoordinates = binIds
-        .map(id => binMap.get(id))
-        .filter(coords => coords !== undefined) as [number, number][];
-      
-      // Generate optimized route
-      try {
-        const optimizedRoute = await optimizeRoute(
-          startLocation as [number, number],
-          orderedCoordinates,
-          endLocation as [number, number]
-        );
-        
-        // Build full route coordinates for our custom calculation
-        const fullRouteCoordinates: [number, number][] = [
-          startLocation as [number, number],
-          ...orderedCoordinates,
-          endLocation as [number, number]
-        ];
-        
-        // Get full bins with fill level for more accurate time estimation
-        const fullBins = await Bin.find({
-          _id: { $in: binIds }
-        }).select('location fillLevel _id');
-        
-        // Calculate realistic metrics using our custom algorithm
-        const customMetrics = calculateRouteMetrics(fullRouteCoordinates, fullBins);
-        
-        // Use our custom calculations instead of ORS
-        routeCoordinates = optimizedRoute.route;
-        routeDistance = customMetrics.distance;
-        routeDuration = customMetrics.duration;
-      } catch (error) {
-        console.error('Error generating route:', error);
-        res.status(500).json({ message: 'Failed to generate route' });
-        return;
-      }
-    }
-    
-    // Create and save the schedule with integrated route data
+
+    // Create schedule data
     const scheduleData: Partial<ISchedule> = {
       name,
-      areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId,
+      areaId: areaId as unknown as Schema.Types.ObjectId,
       date: new Date(date),
-      status: 'scheduled',
-      // Add route data directly to the schedule using the updated property names
-      route: routeCoordinates,
-      distance: routeDistance,
-      duration: routeDuration,
-      binSequence: binIds.map(id => new mongoose.Types.ObjectId(id)) as unknown as Schema.Types.ObjectId[]
+      status: status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
+      route,
+      distance,
+      duration,
+      binSequence: binSequence || []
     };
-    
+
     // Add optional fields if provided
     if (collectorId) {
-      scheduleData.collectorId = new mongoose.Types.ObjectId(collectorId) as unknown as Schema.Types.ObjectId;
+      scheduleData.collectorId = collectorId as unknown as Schema.Types.ObjectId;
     }
     
     if (startTime) {
       scheduleData.startTime = new Date(startTime);
     }
     
+    if (endTime) {
+      scheduleData.endTime = new Date(endTime);
+    }
+
     // Add notes if provided
     if (notes) {
       scheduleData.notes = notes;
     }
-    
+
+    // Create and save the schedule
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
-    
-    // Return response with created schedule
-    res.status(201).json({
-      message: 'Route scheduled successfully',
-      schedule: {
-        ...newSchedule.toObject(),
-        binIds: binIds // Include the bin IDs in the order they were provided for client convenience
-      }
-    });
+
+    res.status(201).json(newSchedule);
   } catch (error: any) {
-    console.error('Error creating route assignment:', error);
+    console.error('Error creating schedule:', error);
     res.status(500).json({ 
-      message: 'Failed to create route assignment', 
+      message: 'Failed to create schedule', 
       error: error.message 
     });
   }

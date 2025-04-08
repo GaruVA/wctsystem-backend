@@ -11,7 +11,7 @@ export interface ISchedule extends Document {
   route: Array<[number, number]>;
   distance: number;
   duration: number;
-  binSequence: Schema.Types.ObjectId[]; // Ordered sequence of bin IDs
+  binSequence: Schema.Types.ObjectId[];
   actualStartTime?: Date;
   actualEndTime?: Date;
   notes?: string;
