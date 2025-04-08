@@ -48,8 +48,8 @@ export function calculateRouteMetrics(
   }
   
   // Parameters that can be adjusted based on real-world data
-  const TRUCK_SPEED_KMH = 20; // Average garbage truck speed in km/h in urban areas
-  const BASE_COLLECTION_TIME_MINS = 3; // Base time to collect from a bin in minutes
+  const TRUCK_SPEED_KMH = 10; // Average garbage truck speed in km/h in urban areas
+  const BASE_COLLECTION_TIME_MINS = 5; // Base time to collect from a bin in minutes
   const FILL_LEVEL_TIME_MULTIPLIER = 0.02; // Additional time per fill level percentage
   
   let totalDistanceKm = 0;
