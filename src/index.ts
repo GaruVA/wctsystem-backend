@@ -8,6 +8,8 @@ import collectorRoutes from './routes/collectorRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import areaRoutes from './routes/areaRoutes';
 import residentRoutes from './routes/residentRoutes';
+import scheduleRoutes from './routes/scheduleRoutes';
+import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -33,6 +35,8 @@ app.use('/api/collector', collectorRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);
+app.use('/api/schedules', scheduleRoutes);
+app.use('/api/route-optimization', routeOptimizationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
