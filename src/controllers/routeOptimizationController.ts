@@ -455,9 +455,7 @@ export const createRouteAssignment = async (req: Request, res: Response): Promis
     const newRoute = new Route({
       coordinates: routeCoordinates,
       distance: routeDistance,
-      duration: routeDuration,
-      fillLevelThreshold: 70, // Default threshold
-      areaId: new mongoose.Types.ObjectId(areaId) as unknown as Schema.Types.ObjectId
+      duration: routeDuration
     });
     
     await newRoute.save();
