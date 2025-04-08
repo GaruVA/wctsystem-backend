@@ -6,6 +6,7 @@ import mongoose, { Schema } from 'mongoose';
 import { optimizeRoute, calculateDistance, formatDistance, formatDuration } from '../services/routeOptimizationService';
 import Schedule, { ISchedule } from '../models/Schedule';
 import Collector from '../models/Collector';
+import { calculateRouteMetrics } from '../utils/routeCalculations'; // Import our custom calculation utility
 
 /**
  * Generate an optimized collection route for a specific area
@@ -107,18 +108,39 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     
     // Map the original bin IDs to the optimized sequence
     let binSequence: string[] = [];
+    let orderedBins: IBin[] = [];
     
     if (optimizedRoute.stops_sequence) {
-      binSequence = optimizedRoute.stops_sequence.map(index => {
+      // Map indices to bin objects and IDs in the optimized sequence
+      orderedBins = optimizedRoute.stops_sequence.map(index => {
         const binIndex = index as number;
-        const bin = eligibleBins[binIndex];
-        return (bin._id as mongoose.Types.ObjectId).toString();
+        return eligibleBins[binIndex];
       });
+      
+      binSequence = orderedBins.map(bin => (bin._id as mongoose.Types.ObjectId).toString());
     }
     
-    // Return the optimized route with bin sequence
+    // Build the full route coordinates (start → bins → end)
+    const fullRouteCoordinates: [number, number][] = [
+      startLocation as [number, number],
+      ...orderedBins.map(bin => bin.location.coordinates as [number, number]),
+      endLocation as [number, number]
+    ];
+    
+    // Calculate realistic metrics using our custom algorithm
+    const customMetrics = calculateRouteMetrics(fullRouteCoordinates, orderedBins);
+    
+    // Clone the ORS route output but replace with our custom metrics
+    const routeWithCustomMetrics = {
+      ...optimizedRoute,
+      // Use our custom metrics (already in km and minutes)
+      distance: customMetrics.distance,
+      duration: customMetrics.duration
+    };
+    
+    // Return the optimized route with bin sequence and custom metrics
     res.status(200).json({
-      route: optimizedRoute,
+      route: routeWithCustomMetrics,
       binSequence
     });
   } catch (error: any) {
@@ -227,8 +249,31 @@ export const adjustExistingRoute = async (req: Request, res: Response): Promise<
         endLocation as [number, number]
       );
       
+      // Build the full route coordinates (start → bins → end)
+      const fullRouteCoordinates: [number, number][] = [
+        startLocation as [number, number],
+        ...orderedCoordinates as Array<[number, number]>,
+        endLocation as [number, number]
+      ];
+      
+      // Get the full bin objects for better collection time estimation
+      const fullBins = await Bin.find({
+        _id: { $in: binOrder }
+      }).select('location fillLevel _id') as IBin[];
+      
+      // Calculate realistic metrics using our custom algorithm
+      const customMetrics = calculateRouteMetrics(fullRouteCoordinates, fullBins);
+      
+      // Clone the ORS route output but replace with our custom metrics
+      const routeWithCustomMetrics = {
+        ...adjustedRoute,
+        // Use our custom metrics (already in km and minutes)
+        distance: customMetrics.distance,
+        duration: customMetrics.duration
+      };
+      
       res.status(200).json({
-        route: adjustedRoute,
+        route: routeWithCustomMetrics,
         binSequence: binOrder
       });
       return;
@@ -370,19 +415,35 @@ export const createRouteAssignment = async (req: Request, res: Response): Promis
       
       const orderedCoordinates = binIds
         .map(id => binMap.get(id))
-        .filter(coords => coords !== undefined);
+        .filter(coords => coords !== undefined) as [number, number][];
       
       // Generate optimized route
       try {
         const optimizedRoute = await optimizeRoute(
           startLocation as [number, number],
-          orderedCoordinates as Array<[number, number]>,
+          orderedCoordinates,
           endLocation as [number, number]
         );
         
+        // Build full route coordinates for our custom calculation
+        const fullRouteCoordinates: [number, number][] = [
+          startLocation as [number, number],
+          ...orderedCoordinates,
+          endLocation as [number, number]
+        ];
+        
+        // Get full bins with fill level for more accurate time estimation
+        const fullBins = await Bin.find({
+          _id: { $in: binIds }
+        }).select('location fillLevel _id');
+        
+        // Calculate realistic metrics using our custom algorithm
+        const customMetrics = calculateRouteMetrics(fullRouteCoordinates, fullBins);
+        
+        // Use our custom calculations instead of ORS
         routeCoordinates = optimizedRoute.route;
-        routeDistance = optimizedRoute.distance;
-        routeDuration = optimizedRoute.duration;
+        routeDistance = customMetrics.distance;
+        routeDuration = customMetrics.duration;
       } catch (error) {
         console.error('Error generating route:', error);
         res.status(500).json({ message: 'Failed to generate route' });
