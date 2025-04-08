@@ -14,11 +14,15 @@ import Collector from '../models/Collector';
 export const generateOptimizedRoute = async (req: Request, res: Response): Promise<void> => {
   try {
     const { areaId } = req.params;
-    const { threshold = 70, include, exclude } = req.query;
+    const { 
+      threshold = 70, 
+      wasteType, 
+      includeCritical = "false" 
+    } = req.query;
     
     console.log(`[Route Optimization] Generating optimized route for area ${areaId} with threshold ${threshold}%`);
     console.log(`[Route Optimization] User: ${req.user?.id}, Role: ${req.user?.role}`);
-    console.log(`[Route Optimization] Include: ${include}, Exclude: ${exclude}`);
+    console.log(`[Route Optimization] Waste Type: ${wasteType}, Include Critical: ${includeCritical}`);
     
     // Find area
     const area = await Area.findById(areaId);
@@ -37,34 +41,47 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
       return;
     }
     
-    // Find bins in this area above the threshold or specifically included
+    // Build the query for bin selection
     const fillLevelThreshold = parseInt(threshold as string);
     let query: any = {
       area: areaId,
-      $or: [{ fillLevel: { $gte: fillLevelThreshold } }]
+      fillLevel: { $gte: fillLevelThreshold }
     };
     
-    // Add bins explicitly included in the route
-    if (include) {
-      const includeIds = (include as string).split(',');
-      query.$or.push({ _id: { $in: includeIds } });
+    // Apply waste type filter if specified
+    if (wasteType) {
+      query.wasteTypes = wasteType;
     }
     
-    // Exclude specific bins if specified
-    if (exclude) {
-      const excludeIds = (exclude as string).split(',');
-      query = {
-        ...query,
-        _id: { $nin: excludeIds }
+    // Find all bins that match the criteria
+    let eligibleBins = await Bin.find(query).select('location fillLevel lastCollected wasteTypes _id') as IBin[];
+    
+    // If includeCritical is true, add critical bins (>=90% fill) regardless of waste type
+    if (includeCritical === 'true') {
+      // Query for critical bins that aren't already in the eligible bins list
+      const criticalBinsQuery: any = { 
+        area: areaId,
+        fillLevel: { $gte: 90 }
       };
+      
+      // If we're filtering by waste type, make sure we don't duplicate bins
+      if (wasteType) {
+        const eligibleBinIds = eligibleBins.map(bin => (bin._id as mongoose.Types.ObjectId).toString());
+        criticalBinsQuery._id = { $nin: eligibleBinIds };
+      }
+      
+      const criticalBins = await Bin.find(criticalBinsQuery)
+        .select('location fillLevel lastCollected wasteTypes _id') as IBin[];
+      
+      console.log(`[Route Optimization] Adding ${criticalBins.length} critical bins to route`);
+      
+      // Combine the eligible bins with critical bins
+      eligibleBins = [...eligibleBins, ...criticalBins];
     }
     
-    // Get eligible bins
-    const bins = await Bin.find(query).select('location fillLevel lastCollected wasteTypes') as IBin[];
+    console.log(`[Route Optimization] Found ${eligibleBins.length} eligible bins`);
     
-    console.log(`Found ${bins.length} eligible bins`);
-    
-    if (bins.length === 0) {
+    if (eligibleBins.length === 0) {
       res.status(200).json({
         message: 'No bins match the criteria for route optimization',
         route: {
@@ -79,7 +96,7 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     }
     
     // Extract coordinates for optimization
-    const binCoordinates = bins.map(bin => bin.location.coordinates as [number, number]);
+    const binCoordinates = eligibleBins.map(bin => bin.location.coordinates as [number, number]);
     
     // Optimize the route
     const optimizedRoute = await optimizeRoute(
@@ -94,7 +111,7 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     if (optimizedRoute.stops_sequence) {
       binSequence = optimizedRoute.stops_sequence.map(index => {
         const binIndex = index as number;
-        const bin = bins[binIndex];
+        const bin = eligibleBins[binIndex];
         return (bin._id as mongoose.Types.ObjectId).toString();
       });
     }
