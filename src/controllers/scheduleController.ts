@@ -314,3 +314,71 @@ export const assignCollector = async (req: Request, res: Response): Promise<void
     });
   }
 };
+
+/**
+ * Get weekly schedule overview (counts per day)
+ */
+export const getWeeklyScheduleOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fromDate, toDate } = req.query;
+    
+    // Validate date parameters
+    if (!fromDate || !toDate) {
+      res.status(400).json({ message: 'Both fromDate and toDate are required' });
+      return;
+    }
+    
+    // Create date range for the query
+    const startDate = new Date(fromDate as string);
+    const endDate = new Date(toDate as string);
+    
+    // Set times to start and end of day to ensure we capture all schedules
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    // Aggregate schedules for the week, grouped by date and status
+    const weeklyOverview = await Schedule.aggregate([
+      {
+        $match: {
+          date: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+            status: "$status"
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.date",
+          date: { $first: "$_id.date" },
+          statusCounts: {
+            $push: {
+              status: "$_id.status",
+              count: "$count"
+            }
+          },
+          totalCount: { $sum: "$count" }
+        }
+      },
+      {
+        $sort: { date: 1 }
+      }
+    ]);
+    
+    res.json({
+      success: true,
+      data: weeklyOverview
+    });
+  } catch (error: any) {
+    console.error('Error getting weekly schedule overview:', error);
+    res.status(500).json({ 
+      message: 'Failed to get weekly schedule overview', 
+      error: error.message 
+    });
+  }
+};

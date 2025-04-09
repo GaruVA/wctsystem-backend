@@ -5,7 +5,8 @@ import {
   getScheduleById, 
   updateSchedule, 
   deleteSchedule,
-  assignCollector
+  assignCollector,
+  getWeeklyScheduleOverview
 } from '../controllers/scheduleController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -16,6 +17,9 @@ router.post('/', auth, requireRole('admin'), createSchedule);
 
 // Route for getting all schedules with filtering
 router.get('/', auth, getSchedules);
+
+// Route for getting weekly schedule overview
+router.get('/weekly-overview', auth, getWeeklyScheduleOverview);
 
 // Route for getting a single schedule by ID
 router.get('/:id', auth, getScheduleById);
