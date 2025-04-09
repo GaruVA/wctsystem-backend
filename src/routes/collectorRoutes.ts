@@ -11,7 +11,9 @@ import {
     updateCollector,
     deleteCollector,
     updateCollectorStatus,
-    getActiveCollectors
+    getActiveCollectors,
+    updateCollectorEfficiency,
+    getCollectorEfficiencyStats
 } from '../controllers/collectorController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -29,10 +31,12 @@ router.post('/location', auth, requireRole('collector'), updateLocation);
 router.post('/assign', auth, requireRole('admin'), assignCollectorToArea);
 router.get('/', auth, requireRole('admin'), getAllCollectors);
 router.get('/active', auth, requireRole('admin'), getActiveCollectors);
+router.get('/efficiency/stats', auth, requireRole('admin'), getCollectorEfficiencyStats);
 router.post('/', auth, requireRole('admin'), addCollector);  
 router.get('/:collectorId', auth, requireRole('admin'), getCollectorById);
 router.put('/:collectorId', auth, requireRole('admin'), updateCollector);
 router.delete('/:collectorId', auth, requireRole('admin'), deleteCollector);
 router.patch('/:collectorId/status', auth, requireRole('admin'), updateCollectorStatus);
+router.patch('/:collectorId/efficiency', auth, requireRole('admin'), updateCollectorEfficiency);
 
 export default router;

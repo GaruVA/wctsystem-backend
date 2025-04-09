@@ -9,6 +9,7 @@ export interface ICollector extends Document {
   lastName?: string;
   phone?: string;
   status: 'active' | 'on-leave' | 'inactive';
+  efficiency?: number; // Collection efficiency percentage
   currentLocation?: {
     type: string;
     coordinates: number[];
@@ -31,6 +32,12 @@ const collectorSchema = new Schema<ICollector>({
 		type: String, 
 		enum: ['active', 'on-leave', 'inactive'],
 		default: 'active'
+	},
+	efficiency: {
+		type: Number,
+		min: 0,
+		max: 100,
+		default: 75 // Default efficiency value
 	},
 	currentLocation: {
     type: {

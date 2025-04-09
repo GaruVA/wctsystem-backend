@@ -263,7 +263,7 @@ export const getCollectorById = async (req: Request, res: Response): Promise<voi
  */
 export const updateCollector = async (req: Request, res: Response): Promise<void> => {
   const { collectorId } = req.params;
-  const { username, email, firstName, lastName, phone, area, status } = req.body;
+  const { username, email, firstName, lastName, phone, area, status, efficiency } = req.body;
 
   try {
     // Check if area exists if provided
@@ -284,6 +284,14 @@ export const updateCollector = async (req: Request, res: Response): Promise<void
     if (phone) updateData.phone = phone;
     if (area) updateData.area = area;
     if (status) updateData.status = status;
+    if (efficiency !== undefined) {
+      // Validate efficiency value is within acceptable range
+      if (efficiency < 0 || efficiency > 100) {
+        res.status(400).json({ message: 'Efficiency must be between 0 and 100' });
+        return;
+      }
+      updateData.efficiency = efficiency;
+    }
     
     const updatedCollector = await Collector.findByIdAndUpdate(
       collectorId,
@@ -374,6 +382,89 @@ export const getActiveCollectors = async (req: Request, res: Response): Promise<
     });
   } catch (error) {
     console.error('Error getting active collectors:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Update collector efficiency (admin only)
+ */
+export const updateCollectorEfficiency = async (req: Request, res: Response): Promise<void> => {
+  const { collectorId } = req.params;
+  const { efficiency } = req.body;
+  
+  // Validate efficiency
+  if (efficiency === undefined || typeof efficiency !== 'number') {
+    res.status(400).json({ message: 'Efficiency value is required and must be a number' });
+    return;
+  }
+  
+  if (efficiency < 0 || efficiency > 100) {
+    res.status(400).json({ message: 'Efficiency must be between 0 and 100' });
+    return;
+  }
+  
+  try {
+    const collector = await Collector.findByIdAndUpdate(
+      collectorId,
+      { efficiency },
+      { new: true }
+    );
+    
+    if (!collector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+    
+    res.json({
+      message: 'Collector efficiency updated successfully',
+      collector
+    });
+  } catch (error) {
+    console.error('Error updating collector efficiency:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get collectors efficiency statistics (admin only)
+ */
+export const getCollectorEfficiencyStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const collectors = await Collector.find().select('efficiency status firstName lastName username');
+    
+    // Calculate overall average efficiency
+    const activeCollectors = collectors.filter(c => c.status === 'active');
+    const avgEfficiency = activeCollectors.reduce((sum, collector) => {
+      return sum + (collector.efficiency || 0);
+    }, 0) / (activeCollectors.length || 1);
+    
+    // Group collectors by efficiency ranges
+    const excellentCount = collectors.filter(c => c.efficiency && c.efficiency >= 90).length;
+    const goodCount = collectors.filter(c => c.efficiency && c.efficiency >= 75 && c.efficiency < 90).length;
+    const averageCount = collectors.filter(c => c.efficiency && c.efficiency >= 60 && c.efficiency < 75).length;
+    const poorCount = collectors.filter(c => c.efficiency && c.efficiency < 60).length;
+    
+    // Find top performers (top 5 by efficiency)
+    const topPerformers = [...collectors]
+      .filter(c => c.status === 'active')
+      .sort((a, b) => (b.efficiency || 0) - (a.efficiency || 0))
+      .slice(0, 5);
+    
+    res.json({
+      avgEfficiency,
+      distribution: {
+        excellent: excellentCount,
+        good: goodCount,
+        average: averageCount, 
+        poor: poorCount
+      },
+      topPerformers,
+      totalCollectors: collectors.length,
+      activeCollectors: activeCollectors.length
+    });
+  } catch (error) {
+    console.error('Error getting collector efficiency stats:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
