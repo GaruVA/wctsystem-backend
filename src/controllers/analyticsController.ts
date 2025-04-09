@@ -94,11 +94,16 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
 export const getAnalyticsByWasteType = async (req: Request, res: Response): Promise<void> => {
   try {
     const bins = await Bin.find().select('fillLevel wasteTypes lastCollected');
-    
+    console.log(`Fetched ${bins.length} bins for waste type analytics`); // Debug log
+
+    if (bins.length === 0) {
+      res.status(404).json({ message: 'No bins found' });
+    }
+
     // Group bins by waste type
     const wasteTypeAnalytics = bins.reduce((acc, bin) => {
       const wasteType = bin.wasteTypes;
-      
+
       if (!acc[wasteType]) {
         acc[wasteType] = {
           count: 0,
@@ -107,14 +112,14 @@ export const getAnalyticsByWasteType = async (req: Request, res: Response): Prom
           needsCollection: 0 // Bins with fill level > 70%
         };
       }
-      
+
       acc[wasteType].count++;
       acc[wasteType].totalFillLevel += bin.fillLevel;
-      
+
       if (bin.fillLevel > 70) {
         acc[wasteType].needsCollection++;
       }
-      
+
       return acc;
     }, {} as Record<string, {
       count: number;
@@ -122,13 +127,13 @@ export const getAnalyticsByWasteType = async (req: Request, res: Response): Prom
       totalFillLevel: number;
       needsCollection: number;
     }>);
-    
+
     // Calculate averages
     for (const wasteType in wasteTypeAnalytics) {
       const data = wasteTypeAnalytics[wasteType];
       data.averageFillLevel = data.totalFillLevel / data.count;
     }
-    
+
     res.json(wasteTypeAnalytics);
   } catch (error) {
     console.error('Error fetching waste type analytics:', error);
@@ -202,6 +207,58 @@ export const getAreaStatusOverview = async (req: Request, res: Response): Promis
     res.json(areaStatusData);
   } catch (error) {
     console.error('Error fetching area status overview:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getCollectionEfficiencyAndBinUtilization = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Fetch bins with their areas
+    const bins = await Bin.find({ lastCollected: { $gte: startOfMonth } })
+      .populate('area', 'name')
+      .select('fillLevel area lastCollected');
+
+    // Group data by area
+    const areaData = bins.reduce((acc, bin) => {
+      const areaName = (bin.area as any)?.name || 'Unassigned';
+
+      if (!acc[areaName]) {
+        acc[areaName] = {
+          totalBins: 0,
+          totalFillLevel: 0,
+          totalCollections: 0,
+          binUtilization: 0,
+        };
+      }
+
+      acc[areaName].totalBins++;
+      acc[areaName].totalFillLevel += bin.fillLevel;
+
+      if (bin.lastCollected) {
+        acc[areaName].totalCollections++;
+      }
+
+      return acc;
+    }, {} as Record<string, { totalBins: number; totalFillLevel: number; totalCollections: number; binUtilization: number }>);
+
+    // Calculate metrics for each area
+    const results = Object.entries(areaData).map(([areaName, data]) => {
+      const collectionEfficiency = data.totalCollections / data.totalBins;
+      const binUtilization = data.totalFillLevel / data.totalBins;
+
+      return {
+        areaName,
+        collectionEfficiency: Math.round(collectionEfficiency * 100), // Percentage
+        binUtilization: Math.round(binUtilization), // Average fill level
+      };
+    });
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error fetching collection efficiency and bin utilization:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
