@@ -167,26 +167,32 @@ export const updateLocation = async (req: Request, res: Response): Promise<void>
 export const addCollector = async (req: Request, res: Response): Promise<void> => {
   const { username, password, email, firstName, lastName, phone, areaId, status } = req.body;
   try {
-    // Check if area exists if provided
-    if (areaId) {
-      const area = await Area.findById(areaId);
-      if (!area) {
+    // Check if area exists if provided and not "unassigned"
+    let area = undefined;
+    if (areaId && areaId !== "unassigned") {
+      const areaExists = await Area.findById(areaId);
+      if (!areaExists) {
         res.status(404).json({ message: 'Area not found' });
         return;
       }
+      area = areaId;
     }
     
-    // Create collector with provided fields
-    const newCollector = new Collector({ 
+    // Create collector with provided fields - omit currentLocation to avoid geo validation errors
+    const collectorData: any = { 
       username, 
       password, 
       email, 
       firstName, 
       lastName,
       phone,
-      area: areaId,
+      area, // Will be undefined if areaId is "unassigned" or not provided
       status: status || 'active'
-    });
+    };
+    
+    // Explicitly avoid setting currentLocation until coordinates are available
+    
+    const newCollector = new Collector(collectorData);
     
     await newCollector.save();
     res.status(201).json({
@@ -284,15 +290,6 @@ export const updateCollector = async (req: Request, res: Response): Promise<void
   const { username, email, firstName, lastName, phone, area, status, efficiency } = req.body;
 
   try {
-    // Check if area exists if provided
-    if (area) {
-      const areaExists = await Area.findById(area);
-      if (!areaExists) {
-        res.status(404).json({ message: 'Area not found' });
-        return;
-      }
-    }
-
     // Build update object with provided fields
     const updateData: any = {};
     if (username) updateData.username = username;
@@ -300,7 +297,21 @@ export const updateCollector = async (req: Request, res: Response): Promise<void
     if (firstName) updateData.firstName = firstName;
     if (lastName) updateData.lastName = lastName;
     if (phone) updateData.phone = phone;
-    if (area) updateData.area = area;
+    
+    // Special handling for area
+    if (area === "unassigned") {
+      // Set to null if "unassigned"
+      updateData.area = null;
+    } else if (area) {
+      // Otherwise check if area exists
+      const areaExists = await Area.findById(area);
+      if (!areaExists) {
+        res.status(404).json({ message: 'Area not found' });
+        return;
+      }
+      updateData.area = area;
+    }
+    
     if (status) updateData.status = status;
     if (efficiency !== undefined) {
       // Validate efficiency value is within acceptable range
