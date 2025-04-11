@@ -352,6 +352,7 @@ const seedData = async () => {
         lastName: 'Smith',
         phone: '+94 77 123 4567',
         status: 'active',
+        efficiency: 92, // High performer
         lastActive: new Date(),
         area: areas[0]._id,
         currentLocation: {
@@ -367,6 +368,7 @@ const seedData = async () => {
         lastName: 'Johnson',
         phone: '+94 76 234 5678',
         status: 'active',
+        efficiency: 85, // Good performer
         lastActive: new Date(),
         area: areas[1]._id,
         currentLocation: {
@@ -382,6 +384,7 @@ const seedData = async () => {
         lastName: 'Williams',
         phone: '+94 75 345 6789',
         status: 'on-leave',
+        efficiency: 68, // Average performer
         lastActive: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
         area: areas[0]._id,
         currentLocation: {
@@ -397,6 +400,7 @@ const seedData = async () => {
         lastName: 'Brown',
         phone: '+94 74 456 7890',
         status: 'inactive',
+        efficiency: 55, // Lower performer
         lastActive: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
         area: areas[1]._id,
         currentLocation: {
