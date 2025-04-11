@@ -210,9 +210,27 @@ export const assignCollectorToArea = async (req: Request, res: Response): Promis
   const { collectorId, areaId } = req.body;
   try {
     const collector = await Collector.findById(collectorId);
+    if (!collector) {
+      res.status(404).json({ message: 'Collector not found' });
+      return;
+    }
+
+    // Special case for "unassigned"
+    if (areaId === "unassigned") {
+      // Remove the area from the collector by setting it to null
+      collector.area = null as any; // Cast to any to bypass TypeScript error
+      await collector.save();
+      res.status(200).json({
+        message: 'Collector unassigned from area successfully',
+        collector
+      });
+      return;
+    }
+    
+    // Normal case - assign to an area
     const area = await Area.findById(areaId);
-    if (!collector || !area) {
-      res.status(404).json({ message: 'Collector or Area not found' });
+    if (!area) {
+      res.status(404).json({ message: 'Area not found' });
       return;
     }
     collector.area = areaId;
