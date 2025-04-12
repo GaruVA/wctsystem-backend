@@ -6,7 +6,7 @@ import Area, { IArea } from '../models/Area';
 import Bin, { IBin } from '../models/Bin';
 import Issue from '../models/Issue';
 import Schedule from '../models/Schedule';
-import { addDays } from 'date-fns';
+import { addDays, format } from 'date-fns';
 
 const seedData = async () => {
   try {
@@ -439,25 +439,43 @@ const seedData = async () => {
     ];
     await Issue.insertMany(issuesData);
 
-    // Calculate dates relative to today
-    const today = new Date();
-    const yesterday = addDays(today, -1);
-    const tomorrow = addDays(today, 1);
-    const dayAfterTomorrow = addDays(today, 2);
-    const nextWeek = addDays(today, 7);
+    // Helper function to create a date at exactly midnight (00:00:00.000) in UTC
+    const createMidnightDate = (year: number, month: number, day: number) => {
+      // Month is 0-indexed in JavaScript Date
+      const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      return date;
+    };
+
+    // Calculate dates relative to today - using explicit UTC dates at midnight
+    const currentDate = new Date();
+    const currentYear = currentDate.getUTCFullYear();
+    const currentMonth = currentDate.getUTCMonth() + 1; // Convert from 0-index to 1-index
+    const currentDay = currentDate.getUTCDate();
+    
+    // Create dates at exactly midnight UTC
+    const today = createMidnightDate(currentYear, currentMonth, currentDay);
+    const yesterday = createMidnightDate(currentYear, currentMonth, currentDay - 1);
+    const tomorrow = createMidnightDate(currentYear, currentMonth, currentDay + 1);
+    const dayAfterTomorrow = createMidnightDate(currentYear, currentMonth, currentDay + 2);
+    const nextWeek = createMidnightDate(currentYear, currentMonth, currentDay + 7);
 
     // Function to create time on a specific date
     const createDateTime = (date: Date, hours: number, minutes: number) => {
       const newDate = new Date(date);
-      newDate.setHours(hours, minutes, 0, 0);
+      newDate.setUTCHours(hours, minutes, 0, 0);
       return newDate;
     };
 
-    // Create Schedules with dynamic dates
+    // Function to format date for schedule name in consistent format
+    const formatScheduleDate = (date: Date) => {
+      return format(date, "EEEE, MMM d"); // e.g. "Monday, Apr 15"
+    };
+
+    // Create Schedules with dynamic dates - Updated format for proper display in day view
     const schedulesData = [
       // Schedule 1: Yesterday - Wellawatte South (completed)
       {
-        name: `${yesterday.toLocaleDateString('en-US', { weekday: 'long' })} - Wellawatte South`,
+        name: `${formatScheduleDate(yesterday)} - Wellawatte South`,
         areaId: areas[0]._id,
         collectorId: collectors[0]._id,
         date: yesterday,
@@ -468,31 +486,33 @@ const seedData = async () => {
           [79.859699, 6.864507], [79.859503, 6.865262], [79.859194, 6.86633], 
           [79.858671, 6.86915], [79.858758, 6.869168], [79.858835, 6.868746],
           [79.858911, 6.868325], [79.859003, 6.867831], [79.859089, 6.86735],
-          [79.860457, 6.867583], [79.861632, 6.867798], [79.862545, 6.867965],
-          [79.862357, 6.868852], [79.862275, 6.869292], [79.862186, 6.869827],
-          [79.862102, 6.870354], [79.86206, 6.870557], [79.862025, 6.870753],
-          [79.862101, 6.870771], [79.86214, 6.870531], [79.862195, 6.870189],
-          [79.862256, 6.869835], [79.862294, 6.869611], [79.862381, 6.869165],
-          [79.862504, 6.868509], [79.86328, 6.868727], [79.863701, 6.86879],
-          [79.864176, 6.868833], [79.865208, 6.869036], [79.864176, 6.868833],
-          [79.863701, 6.86879], [79.86328, 6.868727], [79.862504, 6.868509],
-          [79.862551, 6.868293], [79.862684, 6.867673], [79.862859, 6.866927],
-          [79.862777, 6.86691], [79.862627, 6.867584], [79.862545, 6.867965],
-          [79.8611, 6.870372], [79.861041, 6.870714]
+          [79.859158, 6.866944], [79.859297, 6.866239], [79.859372, 6.865922],
+          [79.859571, 6.86528], [79.859682, 6.864882], [79.859906, 6.864015],
+          [79.859969, 6.863682], [79.860048, 6.863152], [79.860004, 6.863032],
+          [79.860009, 6.862852], [79.860849, 6.86278], [79.861557, 6.862655],
+          [79.862036, 6.86262], [79.86219, 6.862641], [79.862203, 6.862716],
+          [79.862166, 6.862848], [79.862196, 6.862857], [79.862166, 6.862848],
+          [79.862103, 6.863362], [79.862112, 6.863429], [79.862171, 6.863526],
+          [79.861991, 6.864232], [79.862361, 6.864301], [79.862434, 6.864027],
+          [79.863373, 6.864238], [79.863253, 6.864786], [79.863159, 6.865241],
+          [79.862988, 6.865988], [79.862777, 6.86691], [79.862627, 6.867584],
+          [79.862545, 6.867965], [79.862357, 6.868852], [79.862275, 6.869292],
+          [79.862186, 6.869827], [79.862102, 6.870354], [79.86206, 6.870557],
+          [79.861179, 6.870387]
         ],
-        distance: 1.34,
-        duration: 22,
+        distance: 1.18,
+        duration: 14,
         binSequence: [
-          bins[2]._id, // Using actual bin references from the seed data
-          bins[4]._id
+          bins[0]._id
         ],
         actualStartTime: createDateTime(yesterday, 8, 32),
         actualEndTime: createDateTime(yesterday, 9, 12)
       },
+
       
       // Schedule 2: Today - Wellawatte South (in-progress)
       {
-        name: `${today.toLocaleDateString('en-US', { weekday: 'long' })} - Wellawatte South`,
+        name: `${formatScheduleDate(today)} - Wellawatte South`,
         areaId: areas[0]._id,
         collectorId: collectors[0]._id,
         date: today,
@@ -528,7 +548,7 @@ const seedData = async () => {
       
       // Schedule 3: Tomorrow - Pamankada West (scheduled)
       {
-        name: `${tomorrow.toLocaleDateString('en-US', { weekday: 'long' })} - Pamankada West`,
+        name: `${formatScheduleDate(tomorrow)} - Pamankada West`,
         areaId: areas[1]._id,
         collectorId: collectors[1]._id,
         date: tomorrow,
@@ -581,7 +601,7 @@ const seedData = async () => {
       
       // Schedule 4: Day after tomorrow - Wellawatte South (scheduled)
       {
-        name: `${dayAfterTomorrow.toLocaleDateString('en-US', { weekday: 'long' })} - Wellawatte South`,
+        name: `${formatScheduleDate(dayAfterTomorrow)} - Wellawatte South`,
         areaId: areas[0]._id,
         collectorId: collectors[0]._id,
         date: dayAfterTomorrow,
@@ -590,32 +610,35 @@ const seedData = async () => {
         status: 'scheduled',
         route: [
           [79.859699, 6.864507], [79.859503, 6.865262], [79.859194, 6.86633],
-          [79.858671, 6.86915], [79.858758, 6.869168], [79.859691, 6.869308],
-          [79.859757, 6.869318], [79.860426, 6.869478], [79.862186, 6.869827],
-          [79.862102, 6.870354], [79.86206, 6.870557], [79.8611, 6.870372],
-          [79.861041, 6.870714], [79.860934, 6.870372], [79.860876, 6.870099],
-          [79.860809, 6.86979], [79.860756, 6.869539], [79.860736, 6.869451],
-          [79.860691, 6.869262], [79.860554, 6.868704], [79.860507, 6.868511],
-          [79.860368, 6.868234], [79.859954, 6.867978], [79.859884, 6.867935],
-          [79.859798, 6.867881], [79.859713, 6.867826], [79.859628, 6.86777],
-          [79.859159, 6.867509], [79.859057, 6.867712], [79.858904, 6.868028],
-          [79.858838, 6.868175], [79.858758, 6.868356], [79.858675, 6.868539],
-          [79.858625, 6.868641], [79.85855, 6.868811], [79.858495, 6.868927],
-          [79.858758, 6.869168], [79.858671, 6.86915]
+          [79.858671, 6.86915], [79.858184, 6.871883], [79.858267, 6.871902],
+          [79.858379, 6.871274], [79.860639, 6.871765], [79.861794, 6.872016],
+          [79.861685, 6.872598], [79.861562, 6.873274], [79.861631, 6.873309],
+          [79.861703, 6.872931], [79.86181, 6.872371], [79.861898, 6.871913],
+          [79.86195, 6.871592], [79.861997, 6.871343], [79.86205, 6.871077],
+          [79.862101, 6.870771], [79.86214, 6.870531], [79.862195, 6.870189],
+          [79.862256, 6.869835], [79.862294, 6.869611], [79.862381, 6.869165],
+          [79.862504, 6.868509], [79.86328, 6.868727], [79.863701, 6.86879],
+          [79.864176, 6.868833], [79.865208, 6.869036], [79.864176, 6.868833],
+          [79.863701, 6.86879], [79.86328, 6.868727], [79.862504, 6.868509],
+          [79.862551, 6.868293], [79.862684, 6.867673], [79.862859, 6.866927],
+          [79.862777, 6.86691], [79.862627, 6.867584], [79.862545, 6.867965],
+          [79.861632, 6.867798], [79.862545, 6.867965], [79.862357, 6.868852],
+          [79.862275, 6.869292], [79.862186, 6.869827], [79.862102, 6.870354],
+          [79.86206, 6.870557], [79.861179, 6.870387]
         ],
-        distance: 1.52,
-        duration: 40,
+
+        distance: 2.11,
+        duration: 33,
         binSequence: [
-          bins[1]._id,
-          bins[5]._id,
-          bins[9]._id,
-          bins[10]._id
+          bins[0]._id,
+          bins[2]._id,
+          bins[4]._id
         ]
       },
       
       // Schedule 5: Next week - Pamankada West (scheduled)
       {
-        name: `${nextWeek.toLocaleDateString('en-US', { weekday: 'long' })} - Pamankada West`,
+        name: `${formatScheduleDate(nextWeek)} - Pamankada West`,
         areaId: areas[1]._id,
         collectorId: collectors[1]._id,
         date: nextWeek,
