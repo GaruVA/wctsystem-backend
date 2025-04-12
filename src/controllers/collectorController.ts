@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Collector from '../models/Collector';
+import Schedule from '../models/Schedule';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { IArea } from '../models/Area';
@@ -495,5 +496,76 @@ export const getCollectorEfficiencyStats = async (req: Request, res: Response): 
   } catch (error) {
     console.error('Error getting collector efficiency stats:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get schedules for the authenticated collector
+ */
+export const getCollectorSchedules = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+    
+    const { 
+      status, 
+      fromDate, 
+      toDate, 
+      limit = 100,
+      page = 1
+    } = req.query;
+
+    // Build query - always filter by the authenticated collector's ID
+    const query: any = {
+      collectorId: req.user.id
+    };
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    // Date range filter
+    if (fromDate || toDate) {
+      query.date = {};
+      
+      if (fromDate) {
+        query.date.$gte = new Date(fromDate as string);
+      }
+      if (toDate) {
+        query.date.$lte = new Date(toDate as string);
+      }
+    }
+
+    // Calculate pagination
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    // Get schedules with pagination - only for this collector
+    const schedules = await Schedule.find(query)
+      .sort({ date: 1, startTime: 1 }) // Sort by date (ascending) and then startTime
+      .skip(skip)
+      .limit(Number(limit))
+      .populate('areaId', 'name')
+      .populate('collectorId', 'firstName lastName');
+    
+    // Get total count for pagination
+    const totalCount = await Schedule.countDocuments(query);
+    
+    res.json({
+      data: schedules,
+      pagination: {
+        total: totalCount,
+        page: Number(page),
+        limit: Number(limit),
+        pages: Math.ceil(totalCount / Number(limit))
+      }
+    });
+  } catch (error: any) {
+    console.error('Error getting collector schedules:', error);
+    res.status(500).json({ 
+      message: 'Failed to get schedules', 
+      error: error.message 
+    });
   }
 };

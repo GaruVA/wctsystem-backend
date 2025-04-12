@@ -13,7 +13,8 @@ import {
     updateCollectorStatus,
     getActiveCollectors,
     updateCollectorEfficiency,
-    getCollectorEfficiencyStats
+    getCollectorEfficiencyStats,
+    getCollectorSchedules
 } from '../controllers/collectorController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -26,6 +27,7 @@ router.post('/login', loginCollector);
 router.get('/area', auth, requireRole('collector'), getCollectorArea);
 router.get('/location', auth, requireRole('collector'), getLocation);
 router.post('/location', auth, requireRole('collector'), updateLocation);
+router.get('/schedules', auth, requireRole('collector'), getCollectorSchedules);
 
 // Admin management routes
 router.post('/assign', auth, requireRole('admin'), assignCollectorToArea);
