@@ -19,6 +19,7 @@ import './models/Bin';
 import './models/Issue';
 import './models/Schedule';
 import './models/Resident';
+import './models/BinSuggestion';
 
 dotenv.config();
 
