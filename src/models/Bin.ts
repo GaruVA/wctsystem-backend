@@ -8,7 +8,7 @@ export interface IBin extends Document {
   fillLevel: number;
   lastCollected: Date;
   area: Schema.Types.ObjectId;
-  wasteTypes: string;
+  wasteType: string;
 }
 
 const binSchema = new Schema<IBin>({
@@ -19,7 +19,7 @@ const binSchema = new Schema<IBin>({
   fillLevel: { type: Number, required: true, min: 0, max: 100 },
   lastCollected: { type: Date, default: Date.now },
   area: { type: Schema.Types.ObjectId, ref: 'Area' },
-  wasteTypes: { type: String, required: true }
+  wasteType: { type: String, required: true }
 });
 
 binSchema.index({ location: '2dsphere' }); // Important for geo queries

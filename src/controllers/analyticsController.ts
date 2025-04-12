@@ -6,7 +6,7 @@ import Schedule from '../models/Schedule';
 
 export const getFillLevelTrends = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel area lastCollected wasteTypes').populate('area', 'name');
+    const bins = await Bin.find().select('fillLevel area lastCollected wasteType').populate('area', 'name');
     const trends = bins.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
       if (!acc[areaName]) {
@@ -15,10 +15,10 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
       acc[areaName].push({
         fillLevel: bin.fillLevel,
         lastCollected: bin.lastCollected,
-        wasteTypes: bin.wasteTypes
+        wasteType: bin.wasteType
       });
       return acc;
-    }, {} as Record<string, { fillLevel: number; lastCollected: Date; wasteTypes: string }[]>);
+    }, {} as Record<string, { fillLevel: number; lastCollected: Date; wasteType: string }[]>);
 
     res.json(trends);
   } catch (error) {
@@ -29,12 +29,12 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
 
 export const getAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel area lastCollected wasteTypes').populate('area', 'name');
+    const bins = await Bin.find().select('fillLevel area lastCollected wasteType').populate('area', 'name');
     
     // Group analytics by both area and waste type
     const analytics = bins.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
-      const wasteType = bin.wasteTypes;
+      const wasteType = bin.wasteType;
       
       // Create area if it doesn't exist
       if (!acc[areaName]) {
@@ -93,7 +93,7 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
 
 export const getAnalyticsByWasteType = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel wasteTypes lastCollected');
+    const bins = await Bin.find().select('fillLevel wasteType lastCollected');
     console.log(`Fetched ${bins.length} bins for waste type analytics`); // Debug log
 
     if (bins.length === 0) {
@@ -102,7 +102,7 @@ export const getAnalyticsByWasteType = async (req: Request, res: Response): Prom
 
     // Group bins by waste type
     const wasteTypeAnalytics = bins.reduce((acc, bin) => {
-      const wasteType = bin.wasteTypes;
+      const wasteType = bin.wasteType;
 
       if (!acc[wasteType]) {
         acc[wasteType] = {
@@ -149,7 +149,7 @@ export const getAreaStatusOverview = async (req: Request, res: Response): Promis
     // Get status data for each area
     const areaStatusPromises = areas.map(async (area) => {
       // Get bins in this area
-      const bins = await Bin.find({ area: area._id }).select('fillLevel wasteTypes');
+      const bins = await Bin.find({ area: area._id }).select('fillLevel wasteType');
       
       // Calculate average fill level
       const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
@@ -161,7 +161,7 @@ export const getAreaStatusOverview = async (req: Request, res: Response): Promis
       // Count bins by waste type
       const wasteTypeCounts: Record<string, number> = {};
       bins.forEach(bin => {
-        const wasteType = bin.wasteTypes;
+        const wasteType = bin.wasteType;
         wasteTypeCounts[wasteType] = (wasteTypeCounts[wasteType] || 0) + 1;
       });
       

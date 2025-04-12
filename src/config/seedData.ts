@@ -131,97 +131,97 @@ const seedData = async () => {
         location: { type: 'Point', coordinates: [79.85912120574592, 6.8720590105035315] },
         fillLevel: 45,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86064470036273, 6.8717394576604445] },
         fillLevel: 80,
         area: areas[0]._id as Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.85907829040463, 6.8707381906946186] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.85924995176988, 6.870162993824585] },
         fillLevel: 65,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.85970056285372, 6.869246938113764] },
         fillLevel: 75,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.85980785120702, 6.868437399040273] },
         fillLevel: 25,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.86163175321305, 6.867798288272194] },
         fillLevel: 90,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.859872224219, 6.866392241560089] },
         fillLevel: 60,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.86206090662623, 6.866733101750666] },
         fillLevel: 55,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86109531144658, 6.86558269762886] },
         fillLevel: 70,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.86199653358216, 6.864980864716436] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.86220038145342, 6.862839824711644] },
         fillLevel: 85,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.86406719893873, 6.8658223653988] },
         fillLevel: 30,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86422813146355, 6.867974043853853] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.86521518431388, 6.869001946205984] },
         fillLevel: 95,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.86328399395457, 6.868682391308538] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
 
       // Bins for Pamankada West (area[1])
@@ -229,115 +229,115 @@ const seedData = async () => {
         location: { type: 'Point', coordinates: [79.86465509415085, 6.8708554775313955] },
         fillLevel: 95,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.86351783760591, 6.871366762927869] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.86645753848622, 6.872027172417887] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86321743021668, 6.872282814554834] },
         fillLevel: 40,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.86635025013291, 6.873113650550462] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.86319597254602, 6.873177560951526] },
         fillLevel: 30,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.86313159953404, 6.874136215936151] },
         fillLevel: 50,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86540611262393, 6.87437055352718] },
         fillLevel: 65,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.876884349513849] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.878908158646716] },
         fillLevel: 75,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.86785228723241, 6.874072305670325] },
         fillLevel: 25,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.86967618923843, 6.875222689254078] },
         fillLevel: 90,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.87156446450749, 6.878695126555833] },
         fillLevel: 60,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.8725515173578, 6.875073565656626] },
         fillLevel: 80,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS'
       },
       {
         location: { type: 'Point', coordinates: [79.87343128185485, 6.8747540148402] },
         fillLevel: 35,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.87319524747758, 6.8771399890813525] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'ORGANIC'
+        wasteType: 'ORGANIC'
       },
       {
         location: { type: 'Point', coordinates: [79.87062032699848, 6.874945745355843] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       },
       {
         location: { type: 'Point', coordinates: [79.86963327414816, 6.877289112073571] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'GENERAL'
+        wasteType: 'GENERAL'
       },
       {
         location: { type: 'Point', coordinates: [79.87034137727991, 6.878673823337162] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteTypes: 'RECYCLE'
+        wasteType: 'RECYCLE'
       }
     ];
     const bins = await Bin.insertMany(binsData);
