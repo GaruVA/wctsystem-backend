@@ -241,8 +241,8 @@ export const getAreaBins = async (req: Request, res: Response, next: NextFunctio
       return;
     }
     
-    // Find all bins in this area - include wasteTypes in selection
-    const bins = await Bin.find({ area: areaId }).select('location fillLevel lastCollected wasteTypes');
+    // Find all bins in this area - include wasteType in selection
+    const bins = await Bin.find({ area: areaId }).select('location fillLevel lastCollected wasteType');
     res.status(200).json(bins);
   } catch (error) {
     console.error('[Area Controller] Error fetching area bins:', error);
@@ -280,8 +280,8 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
     // Map over areas and add bins for each
     const areasWithBins = await Promise.all(
       areas.map(async (area) => {
-        // Get bins for this area - include wasteTypes in selection
-        const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected wasteTypes');
+        // Get bins for this area - include wasteType in selection
+        const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected wasteType');
         
         // Map bins and add address to each bin using geocoding service
         const binsWithAddresses = await Promise.all(
@@ -298,7 +298,7 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
               location: bin.location,
               fillLevel: bin.fillLevel,
               lastCollected: bin.lastCollected,
-              wasteTypes: bin.wasteTypes,
+              wasteType: bin.wasteType,
               address // Add address to bin data
             };
           })

@@ -10,6 +10,7 @@ import areaRoutes from './routes/areaRoutes';
 import residentRoutes from './routes/residentRoutes';
 import scheduleRoutes from './routes/scheduleRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
+import issueRoutes from './routes/issueRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -37,6 +38,7 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/route-optimization', routeOptimizationRoutes);
+app.use('/api/issue', issueRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

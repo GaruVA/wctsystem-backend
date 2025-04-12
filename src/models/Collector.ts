@@ -14,7 +14,7 @@ export interface ICollector extends Document {
     type: string;
     coordinates: number[];
   };
-  area: Schema.Types.ObjectId;
+  area?: Schema.Types.ObjectId;
   lastActive?: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -42,8 +42,8 @@ const collectorSchema = new Schema<ICollector>({
 	currentLocation: {
     type: {
       type: String,
-      enum: ['Point'],
-      default: 'Point'
+      enum: ['Point']
+      // Removed default: 'Point' to prevent automatic creation
     },
     coordinates: {
       type: [Number], // [longitude, latitude]

@@ -50,11 +50,11 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     
     // Apply waste type filter if specified
     if (wasteType) {
-      query.wasteTypes = wasteType;
+      query.wasteType = wasteType;
     }
     
     // Find all bins that match the criteria
-    let eligibleBins = await Bin.find(query).select('location fillLevel lastCollected wasteTypes _id') as IBin[];
+    let eligibleBins = await Bin.find(query).select('location fillLevel lastCollected wasteType _id') as IBin[];
     
     // If includeCritical is true, add critical bins (>=90% fill) regardless of waste type
     if (includeCritical === 'true') {
@@ -71,7 +71,7 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
       }
       
       const criticalBins = await Bin.find(criticalBinsQuery)
-        .select('location fillLevel lastCollected wasteTypes _id') as IBin[];
+        .select('location fillLevel lastCollected wasteType _id') as IBin[];
       
       console.log(`[Route Optimization] Adding ${criticalBins.length} critical bins to route`);
       
