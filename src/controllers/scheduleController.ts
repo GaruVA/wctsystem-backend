@@ -169,10 +169,58 @@ export const getSchedules = async (req: Request, res: Response): Promise<void> =
 export const getScheduleById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { populateBins } = req.query;
     
-    const schedule = await Schedule.findById(id)
+    let scheduleQuery = Schedule.findById(id)
       .populate('areaId', 'name geometry startLocation endLocation')
       .populate('collectorId', 'firstName lastName email phone');
+    
+    // If populateBins is true, also populate the bin objects from the binSequence
+    if (populateBins === 'true') {
+      // This requires the Bin model to be imported
+      const Bin = mongoose.model('Bin');
+      
+      // First get the schedule with its binSequence
+      const schedule = await scheduleQuery;
+      
+      if (!schedule) {
+        res.status(404).json({ message: 'Schedule not found' });
+        return;
+      }
+      
+      // If we have a bin sequence, populate the bin objects
+      if (schedule.binSequence && schedule.binSequence.length > 0) {
+        // Convert schedule to a plain object so we can modify it
+        const scheduleObj = schedule.toObject();
+        
+        // Fetch all the bins in the sequence
+        const binIds = schedule.binSequence.map(binId => 
+          new mongoose.Types.ObjectId(binId.toString())
+        );
+        
+        const bins = await Bin.find({ _id: { $in: binIds } });
+        
+        // Create a map for quick lookups
+        const binMap = new Map();
+        bins.forEach(bin => {
+          binMap.set(bin._id.toString(), bin);
+        });
+        
+        // Replace the bin IDs with the actual bin objects in the correct order
+        scheduleObj.binSequence = schedule.binSequence.map(binId => {
+          return binMap.get(binId.toString()) || binId;
+        });
+        
+        res.json(scheduleObj);
+        return;
+      }
+      
+      res.json(schedule);
+      return;
+    }
+    
+    // If not populating bins, just return the schedule as is
+    const schedule = await scheduleQuery;
     
     if (!schedule) {
       res.status(404).json({ message: 'Schedule not found' });
