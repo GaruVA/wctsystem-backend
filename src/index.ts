@@ -11,6 +11,7 @@ import residentRoutes from './routes/residentRoutes';
 import scheduleRoutes from './routes/scheduleRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
 import issueRoutes from './routes/issueRoutes';
+import settingsRoutes from './routes/settingsRoutes';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -21,6 +22,7 @@ import './models/Issue';
 import './models/Schedule';
 import './models/Resident';
 import './models/BinSuggestion';
+import './models/Settings';
 
 dotenv.config();
 
@@ -39,6 +41,7 @@ app.use('/api/resident', residentRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/route-optimization', routeOptimizationRoutes);
 app.use('/api/issue', issueRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
