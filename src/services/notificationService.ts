@@ -50,11 +50,11 @@ class NotificationService {
             }
           }
           
-          // Check if this bin already has an unread alert
+          // Check if this bin already has an unread alert by finding exact bin ID
           const existingAlert = await Alert.findOne({
             type: AlertType.BIN_FILL_LEVEL,
-            description: { $regex: `Bin ID: ${bin._id}` },
-            status: AlertStatus.UNREAD
+            status: AlertStatus.UNREAD,
+            description: new RegExp(`Bin with ID ${bin._id}\\b`)
           });
           
           if (!existingAlert) {
@@ -67,6 +67,8 @@ class NotificationService {
               type: AlertType.BIN_FILL_LEVEL
             });
             console.log(`Created new critical alert for bin ${bin._id}`);
+          } else {
+            console.log(`Skipping alert creation - existing unread alert found for bin ${bin._id}`);
           }
         }
       }
@@ -114,11 +116,11 @@ class NotificationService {
         
         console.log(`Area ${area.name || area._id}: Average fill level ${averageFillLevel}%`);
         
-        // Check if this area already has an unread alert
+        // Check if this area already has an unread alert by exact area name
         const existingAlert = await Alert.findOne({
           type: AlertType.AREA_FILL_LEVEL,
-          description: { $regex: `Area ID: ${area._id}` },
-          status: AlertStatus.UNREAD
+          status: AlertStatus.UNREAD,
+          description: new RegExp(`Area ${area.name || `ID: ${area._id}`}\\b`)
         });
         
         // Generate alerts based on thresholds
@@ -126,7 +128,7 @@ class NotificationService {
           // Critical area alert
           await this.createOrUpdateAreaAlert(
             String(area._id), 
-            area.name || `Area ID: ${area._id}`, 
+            area.name || `ID: ${area._id}`, 
             averageFillLevel, 
             AlertSeverity.HIGH,
             existingAlert
@@ -135,7 +137,7 @@ class NotificationService {
           // Warning area alert
           await this.createOrUpdateAreaAlert(
             String(area._id), 
-            area.name || `Area ID: ${area._id}`, 
+            area.name || `ID: ${area._id}`, 
             averageFillLevel, 
             AlertSeverity.MEDIUM,
             existingAlert
@@ -172,7 +174,7 @@ class NotificationService {
         existingAlert.title = title;
         existingAlert.description = description;
         existingAlert.severity = severity;
-        existingAlert.createdAt = new Date(); // Reset creation time to show as new
+        // Don't reset creation time to avoid duplication appearance in UI
         await existingAlert.save();
         console.log(`Updated ${severityText} alert for area ${areaName}`);
       } else {
@@ -213,33 +215,32 @@ class NotificationService {
 
       // Generate alerts for missed collections
       for (const schedule of missedSchedules) {
-        // Check if there's already an unread alert for this missed collection
+        // Get area name if available
+        let areaName = "Unknown Area";
+        let areaId = "unknown";
+        
+        if (schedule.areaId) {
+          if (typeof schedule.areaId === 'object') {
+            const areaObj = schedule.areaId as any;
+            if (areaObj.name) {
+              areaName = areaObj.name;
+            }
+            areaId = areaObj._id ? String(areaObj._id) : String(schedule.areaId);
+          } else {
+            areaId = String(schedule.areaId);
+          }
+        }
+        
+        const scheduledDate = schedule.date.toLocaleDateString();
+
+        // Check if this schedule already has an unread alert by exact schedule ID
         const existingAlert = await Alert.findOne({
           type: AlertType.MISSED_COLLECTION,
-          description: { $regex: `Schedule ID: ${schedule._id}` },
-          status: AlertStatus.UNREAD
+          status: AlertStatus.UNREAD,
+          description: new RegExp(`Collection scheduled for ${areaName} on ${scheduledDate}\\b`)
         });
 
         if (!existingAlert) {
-          // Get area name if available
-          let areaName = "Unknown Area";
-          let areaId = "unknown";
-          
-          if (schedule.areaId) {
-            if (typeof schedule.areaId === 'object') {
-              // Using as any to bypass TypeScript strict checking
-              const areaObj = schedule.areaId as any;
-              if (areaObj.name) {
-                areaName = areaObj.name;
-              }
-              areaId = areaObj._id ? String(areaObj._id) : String(schedule.areaId);
-            } else {
-              areaId = String(schedule.areaId);
-            }
-          }
-          
-          const scheduledDate = schedule.date.toLocaleDateString();
-          
           await Alert.create({
             type: AlertType.MISSED_COLLECTION,
             title: 'Missed Collection',
@@ -249,6 +250,8 @@ class NotificationService {
           });
           
           console.log(`Created missed collection alert for ${areaName} on ${scheduledDate}`);
+        } else {
+          console.log(`Skipping alert creation - existing unread alert found for schedule in ${areaName} on ${scheduledDate}`);
         }
       }
 
