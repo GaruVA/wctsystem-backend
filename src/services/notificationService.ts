@@ -53,7 +53,6 @@ class NotificationService {
           // Check if this bin already has an unread alert by finding exact bin ID
           const existingAlert = await Alert.findOne({
             type: AlertType.BIN_FILL_LEVEL,
-            status: AlertStatus.UNREAD,
             description: new RegExp(`Bin with ID ${bin._id}\\b`)
           });
           
@@ -119,7 +118,6 @@ class NotificationService {
         // Check if this area already has an unread alert by exact area name
         const existingAlert = await Alert.findOne({
           type: AlertType.AREA_FILL_LEVEL,
-          status: AlertStatus.UNREAD,
           description: new RegExp(`Area ${area.name || `ID: ${area._id}`}\\b`)
         });
         
@@ -236,7 +234,6 @@ class NotificationService {
         // Check if this schedule already has an unread alert by exact schedule ID
         const existingAlert = await Alert.findOne({
           type: AlertType.MISSED_COLLECTION,
-          status: AlertStatus.UNREAD,
           description: new RegExp(`Collection scheduled for ${areaName} on ${scheduledDate}\\b`)
         });
 
