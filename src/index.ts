@@ -12,6 +12,8 @@ import scheduleRoutes from './routes/scheduleRoutes';
 import routeOptimizationRoutes from './routes/routeOptimizationRoutes';
 import issueRoutes from './routes/issueRoutes';
 import settingsRoutes from './routes/settingsRoutes';
+import alertRoutes from './routes/alertRoutes';
+import scheduler from './services/scheduler';
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -23,6 +25,7 @@ import './models/Schedule';
 import './models/Resident';
 import './models/BinSuggestion';
 import './models/Settings';
+import './models/Alert';
 
 dotenv.config();
 
@@ -42,6 +45,7 @@ app.use('/api/schedules', scheduleRoutes);
 app.use('/api/route-optimization', routeOptimizationRoutes);
 app.use('/api/issue', issueRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/alerts', alertRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -49,7 +53,14 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ message: 'Something went wrong, please try again later!' });
 });
 
-connectDB();
+connectDB().then(() => {
+  console.log('Connected to MongoDB');
+  
+  // Start the scheduler after successful DB connection
+  scheduler.start();
+}).catch(err => {
+  console.error('Failed to connect to MongoDB', err);
+});
 
 app.get('/', (req: Request, res: Response) => {
   res.send('WCTSystem API is running');
