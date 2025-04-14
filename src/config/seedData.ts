@@ -457,11 +457,6 @@ const seedData = async () => {
         bin: bins[7]._id,
         issueType: 'Graffiti',
         description: 'Bin covered in graffiti needs cleaning.'
-      },
-      {
-        bin: bins[3]._id,
-        issueType: 'new Bin',
-        description: 'new bin bin.'
       }
     ];
     await Issue.insertMany(issuesData);
@@ -705,8 +700,7 @@ const seedData = async () => {
       // Sample coordinates provided by the user
       const suggestionCoordinates = [
         { longitude: 79.86064133158473, latitude: 6.870257819039346 },
-        { longitude: 79.86156423394904, latitude: 6.869208856216798 },
-        { longitude: 79.86706755622684, latitude: 6.875729564892681 }
+        { longitude: 79.86156423394904, latitude: 6.869208856216798 }
       ];
       
       const binSuggestionsData = [];
