@@ -6,6 +6,8 @@ import Area, { IArea } from '../models/Area';
 import Bin, { IBin } from '../models/Bin';
 import Issue from '../models/Issue';
 import Schedule from '../models/Schedule';
+import BinSuggestion from '../models/BinSuggestion';
+import { getFormattedAddress } from '../services/geocodingService';
 import { addDays, format } from 'date-fns';
 
 const seedData = async () => {
@@ -343,7 +345,32 @@ const seedData = async () => {
         wasteType: 'RECYCLE'
       }
     ];
-    const bins = await Bin.insertMany(binsData);
+    
+    // Process bins to add addresses
+    const processBinsWithAddresses = async () => {
+      console.log('Generating addresses for bins...');
+      const binsWithAddresses = [];
+      
+      for (const binData of binsData) {
+        if (binData.location && binData.location.coordinates) {
+          // Generate address from coordinates
+          const address = await getFormattedAddress(binData.location.coordinates);
+          binsWithAddresses.push({
+            ...binData,
+            address
+          });
+        } else {
+          binsWithAddresses.push(binData);
+        }
+      }
+      
+      return binsWithAddresses;
+    };
+    
+    // Process bins with addresses and insert them
+    const processedBins = await processBinsWithAddresses();
+    const bins = await Bin.insertMany(processedBins);
+    console.log(`Added ${bins.length} bins with addresses`);
 
     // Create Collectors with positions on actual streets within their areas
     const collectorsData = [
@@ -503,7 +530,7 @@ const seedData = async () => {
         distance: 1.18,
         duration: 14,
         binSequence: [
-          bins[0]._id
+          bins[11]._id
         ],
         actualStartTime: createDateTime(yesterday, 8, 32),
         actualEndTime: createDateTime(yesterday, 9, 12)
@@ -521,26 +548,28 @@ const seedData = async () => {
         status: 'in-progress',
         route: [
           [79.859699, 6.864507], [79.859503, 6.865262], [79.859194, 6.86633],
-          [79.858671, 6.86915], [79.858758, 6.869168], [79.859691, 6.869308],
-          [79.859757, 6.869318], [79.860426, 6.869478], [79.862186, 6.869827],
-          [79.862102, 6.870354], [79.86206, 6.870557], [79.862025, 6.870753],
+          [79.858671, 6.86915], [79.858184, 6.871883], [79.858267, 6.871902],
+          [79.858379, 6.871274], [79.860639, 6.871765], [79.861794, 6.872016],
+          [79.861685, 6.872598], [79.861562, 6.873274], [79.861631, 6.873309],
+          [79.861703, 6.872931], [79.86181, 6.872371], [79.861898, 6.871913],
+          [79.86195, 6.871592], [79.861997, 6.871343], [79.86205, 6.871077],
           [79.862101, 6.870771], [79.86214, 6.870531], [79.862195, 6.870189],
           [79.862256, 6.869835], [79.862294, 6.869611], [79.862381, 6.869165],
-          [79.862504, 6.868509], [79.86328, 6.868727], [79.863701, 6.86879],
-          [79.864176, 6.868833], [79.865208, 6.869036], [79.864176, 6.868833],
-          [79.863701, 6.86879], [79.86328, 6.868727], [79.862504, 6.868509],
-          [79.862551, 6.868293], [79.862684, 6.867673], [79.862859, 6.866927],
-          [79.862777, 6.86691], [79.862627, 6.867584], [79.862545, 6.867965],
-          [79.862357, 6.868852], [79.862275, 6.869292], [79.862186, 6.869827],
-          [79.862102, 6.870354], [79.86206, 6.870557], [79.8611, 6.870372],
-          [79.861041, 6.870714]
+          [79.862504, 6.868509], [79.862551, 6.868293], [79.862684, 6.867673],
+          [79.862859, 6.866927], [79.862919, 6.866664], [79.863006, 6.86631],
+          [79.863072, 6.866004], [79.862988, 6.865988], [79.862249, 6.865839],
+          [79.862163, 6.865822], [79.861789, 6.865747], [79.861429, 6.865675],
+          [79.86109, 6.865606], [79.86097, 6.865582], [79.860752, 6.866514],
+          [79.861233, 6.866624], [79.861951, 6.866755], [79.862777, 6.86691],
+          [79.862627, 6.867584], [79.862545, 6.867965], [79.862357, 6.868852],
+          [79.862275, 6.869292], [79.862186, 6.869827], [79.862102, 6.870354],
+          [79.86206, 6.870557], [79.861179, 6.870387]
         ],
-        distance: 1.88,
-        duration: 32,
+        distance: 2.03,
+        duration: 25,
         binSequence: [
-          bins[0]._id,
-          bins[6]._id,
-          bins[2]._id
+          bins[1]._id,  // Organic bin at Boswell Place (index 1 in binsData array)
+          bins[9]._id   // Organic bin at Fair View (index 9 in binsData array)
         ],
         actualStartTime: createDateTime(today, 9, 48),
         notes: "Traffic delays on Marine Drive"
@@ -561,41 +590,26 @@ const seedData = async () => {
           [79.865473, 6.870988], [79.865238, 6.87095], [79.864668, 6.870805],
           [79.865238, 6.87095], [79.865473, 6.870988], [79.865685, 6.870996],
           [79.865957, 6.871484], [79.866182, 6.871666], [79.866515, 6.871848],
-          [79.866487, 6.872023], [79.866435, 6.872424], [79.866419, 6.872547],
-          [79.866405, 6.872665], [79.866361, 6.873048], [79.866354, 6.873079],
-          [79.866347, 6.873113], [79.866312, 6.873273], [79.866199, 6.87369],
-          [79.866167, 6.873804], [79.865967, 6.874553], [79.865903, 6.874829],
-          [79.865789, 6.875264], [79.865672, 6.8756], [79.865589, 6.875856],
-          [79.865478, 6.87618], [79.865368, 6.876559], [79.865296, 6.876546],
-          [79.865279, 6.876598], [79.865354, 6.876612], [79.865986, 6.876684],
-          [79.86624, 6.876705], [79.866624, 6.876743], [79.866889, 6.876769],
-          [79.867259, 6.876845], [79.86784, 6.876955], [79.868437, 6.877081],
-          [79.869473, 6.877311], [79.869529, 6.87732], [79.869542, 6.877273],
-          [79.869551, 6.87724], [79.8696, 6.877088], [79.869849, 6.876776],
-          [79.86994, 6.876642], [79.870181, 6.876127], [79.870277, 6.875806],
-          [79.870357, 6.875493], [79.870395, 6.875404], [79.870535, 6.875137],
-          [79.870598, 6.874939], [79.870703, 6.874615], [79.870776, 6.874454],
-          [79.870879, 6.874346], [79.871023, 6.874267], [79.871373, 6.874197],
-          [79.871685, 6.874135], [79.871862, 6.874103], [79.872082, 6.874043],
-          [79.872455, 6.87391], [79.872513, 6.873836], [79.872423, 6.873806],
-          [79.872349, 6.873851], [79.87222, 6.873922], [79.872068, 6.873981],
-          [79.871849, 6.874041], [79.871094, 6.874174], [79.870996, 6.874203],
-          [79.870839, 6.874282], [79.870784, 6.874325], [79.870671, 6.874482],
-          [79.87055, 6.874899], [79.870493, 6.87505], [79.870297, 6.875476],
+          [79.866487, 6.872023], [79.86646, 6.872016], [79.866487, 6.872023],
+          [79.866435, 6.872424], [79.866419, 6.872547], [79.866405, 6.872665],
+          [79.866361, 6.873048], [79.866354, 6.873079], [79.866312, 6.873273],
+          [79.866199, 6.87369], [79.866586, 6.873803], [79.866722, 6.873849],
+          [79.867208, 6.87399], [79.867394, 6.874041], [79.867582, 6.874079],
+          [79.867856, 6.874084], [79.868015, 6.874059], [79.868947, 6.874074],
+          [79.868969, 6.874098], [79.869078, 6.874515], [79.869137, 6.874552],
+          [79.8697, 6.874539], [79.869666, 6.874766], [79.869639, 6.875234],
           [79.869668, 6.875245], [79.870297, 6.875476], [79.870163, 6.875974],
           [79.870072, 6.876219], [79.869885, 6.87661], [79.869794, 6.876739],
-          [79.869542, 6.877057], [79.869513, 6.877138], [79.869487, 6.877225],
-          [79.869473, 6.877311]
+          [79.869849, 6.876776], [79.869964, 6.876822], [79.870308, 6.87685],
+          [79.87048, 6.8769], [79.870531, 6.876943], [79.870583, 6.876986],
+          [79.870842, 6.877236], [79.871009, 6.877409], [79.871009, 6.877417]
         ],
-        distance: 1.82,
-        duration: 50,
+        distance: 1.23,
+        duration: 27,
         binSequence: [
-          bins[16]._id,
-          bins[17]._id,
-          bins[22]._id,
-          bins[18]._id,
-          bins[24]._id,
-          bins[19]._id
+          bins[16]._id,  // Recycle bin at Arethusa Lane
+          bins[18]._id,  // General bin at Noor implex
+          bins[27]._id   // Organic bin at Kalyani Road
         ]
       },
       
@@ -630,9 +644,9 @@ const seedData = async () => {
         distance: 2.11,
         duration: 33,
         binSequence: [
-          bins[0]._id,
-          bins[2]._id,
-          bins[4]._id
+          bins[1]._id,
+          bins[14]._id,
+          bins[6]._id
         ]
       },
       
@@ -675,16 +689,47 @@ const seedData = async () => {
         distance: 1.5,
         duration: 36,
         binSequence: [
-          bins[17]._id, 
-          bins[20]._id,
-          bins[25]._id,
-          bins[27]._id
+          bins[16]._id,  // Recycle bin at Arethusa Lane
+          bins[20]._id,  // Recycle bin at HNB
+          bins[27]._id,  // Organic bin at Kalyani Road
+          bins[34]._id   // Recycle bin at Ishwari Road
         ],
         notes: "Focus on recycling bins this week"
       }
     ];
     
     await Schedule.insertMany(schedulesData);
+
+    // Create Bin Suggestions with the sample coordinates provided
+    const createBinSuggestions = async () => {
+      // Sample coordinates provided by the user
+      const suggestionCoordinates = [
+        { longitude: 79.86064133158473, latitude: 6.870257819039346 },
+        { longitude: 79.86156423394904, latitude: 6.869208856216798 },
+        { longitude: 79.86706755622684, latitude: 6.875729564892681 }
+      ];
+      
+      const binSuggestionsData = [];
+      
+      // Generate bin suggestions with addresses
+      for (const coords of suggestionCoordinates) {
+        const address = await getFormattedAddress([coords.longitude, coords.latitude]);
+        
+        binSuggestionsData.push({
+          reason: "High foot traffic area needs waste collection",
+          location: coords,
+          address
+        });
+      }
+      
+      // Add bin suggestions to the database
+      await BinSuggestion.deleteMany({});
+      await BinSuggestion.insertMany(binSuggestionsData);
+      console.log(`Added ${binSuggestionsData.length} bin suggestions with addresses`);
+    };
+    
+    // Call the function to create bin suggestions
+    await createBinSuggestions();
 
     console.log('Seed data added successfully.');
     process.exit();
