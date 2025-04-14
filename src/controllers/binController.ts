@@ -2,18 +2,50 @@ import { Request, Response, NextFunction } from 'express';
 import Bin from '../models/Bin';
 import Issue from '../models/Issue';
 import Area from '../models/Area'; // Import the Area model
+import { getFormattedAddress } from '../services/geocodingService'; // Import geocoding service
 
 
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { bin_id, fill_level, latitude, longitude, timestamp, wasteType } = req.body;
+    const { binId } = req.params;
+    const { fillLevel, location, wasteType, area } = req.body;
 
     try {
-        const updatedBin = await Bin.findOneAndUpdate(
-            { bin_id },
-            { fill_level, latitude, longitude, timestamp, wasteType },
-            { new: true, upsert: true }
+        // Create update object
+        const updateData: any = {};
+        
+        if (fillLevel !== undefined) {
+            updateData.fillLevel = fillLevel;
+        }
+        
+        if (wasteType) {
+            updateData.wasteType = wasteType;
+        }
+        
+        if (area) {
+            updateData.area = area;
+        }
+        
+        // Generate and store address if location is provided
+        if (location && location.coordinates && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+            updateData.location = {
+                type: 'Point',
+                coordinates: location.coordinates
+            };
+            updateData.address = await getFormattedAddress(location.coordinates);
+        }
+        
+        const updatedBin = await Bin.findByIdAndUpdate(
+            binId,
+            updateData,
+            { new: true, runValidators: true }
         );
+        
+        if (!updatedBin) {
+            res.status(404).json({ message: 'Bin not found' });
+            return;
+        }
+        
         res.status(200).json(updatedBin);
     } catch (error) {
         console.error(error);
@@ -98,17 +130,31 @@ export const directUpdateBin = async (req: Request, res: Response): Promise<void
 };
 
 // Add new function to create bins
-export const createBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { bin_id, latitude, longitude, wasteType } = req.body;
+export const createBin = async (req: Request, res: Response): Promise<void> => {
+    const { wasteType, location, area } = req.body;
 
     try {
+        // Validate location
+        if (!location || !location.coordinates || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+            res.status(400).json({ message: 'Valid location coordinates are required' });
+            return;
+        }
+        
+        // Generate address from coordinates
+        let address = undefined;
+        if (location && location.coordinates) {
+            address = await getFormattedAddress(location.coordinates);
+        }
+
         const newBin = new Bin({
-            bin_id,
-            fill_level: 0, // Initialize empty
-            latitude,
-            longitude,
-            timestamp: new Date().toISOString(),
-            wasteType: wasteType || 'GENERAL' // Default to GENERAL if not specified
+            location: {
+                type: 'Point',
+                coordinates: location.coordinates
+            },
+            fillLevel: 0, // Initialize empty
+            wasteType: wasteType || 'GENERAL', // Default to GENERAL if not specified
+            address, // Add the address
+            area // Optional area assignment
         });
 
         await newBin.save();

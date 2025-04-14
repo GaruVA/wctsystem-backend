@@ -1,9 +1,10 @@
-import express from 'express';
-import { createBinSuggestion, getBinSuggestions } from '../controllers/binSuggestionController';
+import express, { Router } from 'express';
+import { createBinSuggestion, getBinSuggestions, deleteBinSuggestion } from '../controllers/binSuggestionController';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 router.post('/', createBinSuggestion);
 router.get('/', getBinSuggestions);
+router.delete('/:suggestionId', deleteBinSuggestion);
 
 export default router;

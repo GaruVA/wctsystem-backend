@@ -53,13 +53,18 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // Get bins in this area - include wasteType in selection
-    const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location wasteType') as IBin[];
+    // Get bins in this area - include address field in selection
+    const bins = await Bin.find({ area: area._id }).select('fillLevel lastCollected location wasteType address');
     
-    // Map bins and add address to each bin
+    // Map bins and use stored address or generate if not available
     const mappedBinsPromises = bins.map(async bin => {
-      // Get address for this bin's coordinates
-      const address = await getAddressFromCoordinates(bin.location.coordinates);
+      // Use stored address or generate one if not available
+      let address = bin.address;
+      if (!address) {
+        address = await getAddressFromCoordinates(bin.location.coordinates);
+        // Update the bin with the generated address for future use
+        await Bin.findByIdAndUpdate(bin._id, { address });
+      }
       
       return {
         _id: bin._id,
@@ -67,11 +72,11 @@ export const getCollectorArea = async (req: Request, res: Response): Promise<voi
         fillLevel: bin.fillLevel,
         lastCollected: bin.lastCollected,
         wasteType: bin.wasteType,
-        address // Add address to bin data
+        address
       };
     });
     
-    // Wait for all address lookups to complete
+    // Wait for all address processing to complete
     const mappedBins = await Promise.all(mappedBinsPromises);
 
     res.json({
