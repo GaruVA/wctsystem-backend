@@ -6,6 +6,7 @@ export interface BinSuggestion extends Document {
     longitude: number;
     latitude: number;
   };
+  address?: string; // Optional address field for reverse geocoded location
   createdAt: Date;
 }
 
@@ -15,6 +16,7 @@ const binSuggestionSchema = new Schema<BinSuggestion>({
     longitude: { type: Number, required: true },
     latitude: { type: Number, required: true },
   },
+  address: { type: String },  // Reverse geocoded address
   createdAt: { type: Date, default: Date.now },
 });
 
