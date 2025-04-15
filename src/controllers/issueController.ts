@@ -3,8 +3,8 @@ import Issue from '../models/Issue';
 
 export const getIssues = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Fetch all issues and populate the 'bin' field with its name
-    const issues = await Issue.find().populate('bin', 'name');
+    // Fetch all issues and populate the 'bin' field with its id
+    const issues = await Issue.find().populate('bin', '_id');
 
     // Respond with the fetched issues
     res.status(200).json(issues);
