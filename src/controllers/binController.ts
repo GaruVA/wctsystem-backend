@@ -406,3 +406,30 @@ export const updateBinStatus = async (req: Request, res: Response): Promise<void
     res.status(500).json({ message: 'Failed to update bin status.' });
   }
 };
+
+// Add a function to delete a bin permanently
+export const deleteBin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    
+    console.log(`[Backend] Deleting bin ${binId} permanently`);
+    
+    // Delete the bin from the database
+    const deletedBin = await Bin.findByIdAndDelete(binId);
+
+    if (!deletedBin) {
+      console.log(`[Backend] Bin ${binId} not found for deletion`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+    
+    console.log(`[Backend] Successfully deleted bin ${binId}`);
+    res.status(200).json({
+      success: true,
+      message: 'Bin deleted successfully'
+    });
+  } catch (error) {
+    console.error('[Backend] Error deleting bin:', error);
+    res.status(500).json({ message: 'Failed to delete bin.' });
+  }
+};

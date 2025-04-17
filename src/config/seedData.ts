@@ -383,7 +383,7 @@ const seedData = async () => {
       {
         location: { type: 'Point', coordinates: [79.86156423394904, 6.869208856216798] },
         fillLevel: 0,
-        area: areas[1]._id as mongoose.Schema.Types.ObjectId, // Pamankada area
+        area: areas[0]._id as mongoose.Schema.Types.ObjectId, // Pamankada area
         wasteType: 'GENERAL',
         status: 'PENDING_INSTALLATION'
       }

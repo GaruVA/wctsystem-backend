@@ -12,7 +12,8 @@ import {
   getBinsByWasteType,
   updateBinWasteType,
   getBinsByStatus,
-  updateBinStatus
+  updateBinStatus,
+  deleteBin
 } from '../controllers/binController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
@@ -23,6 +24,7 @@ const router = express.Router();
 router.post('/create', createBin);
 router.post('/update', updateBin);
 router.get('/', getBins);
+router.delete('/:binId', auth, requireRole('admin'), deleteBin); // Add route to permanently delete a bin
 
 // Waste type related routes
 router.get('/waste-type/:wasteType', getBinsByWasteType);
