@@ -136,97 +136,113 @@ const seedData = async () => {
         location: { type: 'Point', coordinates: [79.85912120574592, 6.8720590105035315] },
         fillLevel: 45,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'INACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86064470036273, 6.8717394576604445] },
         fillLevel: 80,
         area: areas[0]._id as Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.85907829040463, 6.8707381906946186] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.85924995176988, 6.870162993824585] },
         fillLevel: 65,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.85970056285372, 6.869246938113764] },
         fillLevel: 75,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.85980785120702, 6.868437399040273] },
         fillLevel: 25,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86163175321305, 6.867798288272194] },
         fillLevel: 90,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.859872224219, 6.866392241560089] },
         fillLevel: 60,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86206090662623, 6.866733101750666] },
         fillLevel: 55,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86109531144658, 6.86558269762886] },
         fillLevel: 70,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86199653358216, 6.864980864716436] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86220038145342, 6.862839824711644] },
         fillLevel: 85,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86406719893873, 6.8658223653988] },
         fillLevel: 30,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86422813146355, 6.867974043853853] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86521518431388, 6.869001946205984] },
         fillLevel: 95,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86328399395457, 6.868682391308538] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
 
       // Bins for Pamankada West (area[1])
@@ -234,115 +250,142 @@ const seedData = async () => {
         location: { type: 'Point', coordinates: [79.86465509415085, 6.8708554775313955] },
         fillLevel: 95,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86351783760591, 6.871366762927869] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86645753848622, 6.872027172417887] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86321743021668, 6.872282814554834] },
         fillLevel: 40,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86635025013291, 6.873113650550462] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86319597254602, 6.873177560951526] },
         fillLevel: 30,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'MAINTENANCE'
       },
       {
         location: { type: 'Point', coordinates: [79.86313159953404, 6.874136215936151] },
         fillLevel: 50,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86540611262393, 6.87437055352718] },
         fillLevel: 65,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.876884349513849] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'MAINTENANCE'
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.878908158646716] },
         fillLevel: 75,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86785228723241, 6.874072305670325] },
         fillLevel: 25,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86967618923843, 6.875222689254078] },
         fillLevel: 90,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.87156446450749, 6.878695126555833] },
         fillLevel: 60,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.8725515173578, 6.875073565656626] },
         fillLevel: 80,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'HAZARDOUS'
+        wasteType: 'HAZARDOUS',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.87343128185485, 6.8747540148402] },
         fillLevel: 35,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.87319524747758, 6.8771399890813525] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'ORGANIC'
+        wasteType: 'ORGANIC',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.87062032699848, 6.874945745355843] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.86963327414816, 6.877289112073571] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'GENERAL'
+        wasteType: 'GENERAL',
+        status: 'ACTIVE'
       },
       {
         location: { type: 'Point', coordinates: [79.87034137727991, 6.878673823337162] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
-        wasteType: 'RECYCLE'
+        wasteType: 'RECYCLE',
+        status: 'ACTIVE'
+      },
+      // New bin from the 3rd suggestion - set to PENDING_INSTALLATION in Pamankada
+      {
+        location: { type: 'Point', coordinates: [79.86156423394904, 6.869208856216798] },
+        fillLevel: 0,
+        area: areas[1]._id as mongoose.Schema.Types.ObjectId, // Pamankada area
+        wasteType: 'GENERAL',
+        status: 'PENDING_INSTALLATION'
       }
     ];
     
@@ -585,10 +628,9 @@ const seedData = async () => {
           [79.865473, 6.870988], [79.865238, 6.87095], [79.864668, 6.870805],
           [79.865238, 6.87095], [79.865473, 6.870988], [79.865685, 6.870996],
           [79.865957, 6.871484], [79.866182, 6.871666], [79.866515, 6.871848],
-          [79.866487, 6.872023], [79.86646, 6.872016], [79.866487, 6.872023],
-          [79.866435, 6.872424], [79.866419, 6.872547], [79.866405, 6.872665],
-          [79.866361, 6.873048], [79.866354, 6.873079], [79.866312, 6.873273],
-          [79.866199, 6.87369], [79.866586, 6.873803], [79.866722, 6.873849],
+          [79.866487, 6.872023], [79.866435, 6.872424], [79.866419, 6.872547],
+          [79.866405, 6.872665], [79.866361, 6.873048], [79.866354, 6.873079],
+          [79.866312, 6.873273], [79.866199, 6.87369], [79.866586, 6.873803], [79.866722, 6.873849],
           [79.867208, 6.87399], [79.867394, 6.874041], [79.867582, 6.874079],
           [79.867856, 6.874084], [79.868015, 6.874059], [79.868947, 6.874074],
           [79.868969, 6.874098], [79.869078, 6.874515], [79.869137, 6.874552],
@@ -700,7 +742,7 @@ const seedData = async () => {
       // Sample coordinates provided by the user
       const suggestionCoordinates = [
         { longitude: 79.86064133158473, latitude: 6.870257819039346 },
-        { longitude: 79.86156423394904, latitude: 6.869208856216798 }
+        { longitude: 79.86706755622684, latitude: 6.875729564892681 }
       ];
       
       const binSuggestionsData = [];

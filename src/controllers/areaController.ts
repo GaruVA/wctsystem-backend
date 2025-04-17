@@ -280,8 +280,8 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
     // Map over areas and add bins for each
     const areasWithBins = await Promise.all(
       areas.map(async (area) => {
-        // Get bins for this area - include wasteType and address in selection
-        const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected wasteType address');
+        // Get bins for this area - include wasteType, status and address in selection
+        const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected wasteType address status');
         
         // Map bins and use stored address when available
         const binsWithAddresses = await Promise.all(
@@ -300,7 +300,8 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
               fillLevel: bin.fillLevel,
               lastCollected: bin.lastCollected,
               wasteType: bin.wasteType,
-              address
+              address,
+              status: bin.status
             };
           })
         );

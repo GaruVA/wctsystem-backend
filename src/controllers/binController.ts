@@ -8,7 +8,7 @@ import { getFormattedAddress } from '../services/geocodingService'; // Import ge
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { binId } = req.params;
-    const { fillLevel, location, wasteType, area } = req.body;
+    const { fillLevel, location, wasteType, area, status } = req.body;
 
     try {
         // Create update object
@@ -24,6 +24,10 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
         
         if (area) {
             updateData.area = area;
+        }
+        
+        if (status) {
+            updateData.status = status;
         }
         
         // Generate and store address if location is provided
@@ -131,7 +135,7 @@ export const directUpdateBin = async (req: Request, res: Response): Promise<void
 
 // Add new function to create bins
 export const createBin = async (req: Request, res: Response): Promise<void> => {
-    const { wasteType, location, area } = req.body;
+    const { wasteType, location, area, status } = req.body;
 
     try {
         // Validate location
@@ -154,7 +158,8 @@ export const createBin = async (req: Request, res: Response): Promise<void> => {
             fillLevel: 0, // Initialize empty
             wasteType: wasteType || 'GENERAL', // Default to GENERAL if not specified
             address, // Add the address
-            area // Optional area assignment
+            area, // Optional area assignment
+            status: status || 'ACTIVE' // Default to ACTIVE if not specified
         });
 
         await newBin.save();
@@ -182,18 +187,18 @@ export const getBins = async (req: Request, res: Response, next: NextFunction): 
 export const getBinDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { binId } = req.params;
-    const bin = await Bin.findById(binId).select('location fillLevel lastCollected wasteType');
+    const bin = await Bin.findById(binId).select('location fillLevel lastCollected wasteType status');
     if (!bin) {
       res.status(404).json({ message: 'Bin not found' });
       return;
     }
-    // Add default status since it's not stored in the model.
+    
     res.status(200).json({
       _id: bin._id,
       location: bin.location,
       fillLevel: bin.fillLevel,
       lastCollected: bin.lastCollected,
-      status: "normal",
+      status: bin.status || 'ACTIVE', // Use the stored status or default to ACTIVE
       wasteType: bin.wasteType
     });
   } catch (error) {
@@ -341,5 +346,63 @@ export const getBinsByWasteType = async (req: Request, res: Response): Promise<v
   } catch (error) {
     console.error('[Backend] Error fetching bins by waste type:', error);
     res.status(500).json({ message: 'Failed to fetch bins by waste type.' });
+  }
+};
+
+// Add a function to filter bins by status
+export const getBinsByStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { status } = req.params;
+    
+    if (!['ACTIVE', 'MAINTENANCE', 'INACTIVE', 'PENDING_INSTALLATION'].includes(status)) {
+      res.status(400).json({ 
+        message: 'Invalid status. Must be one of: ACTIVE, MAINTENANCE, INACTIVE, PENDING_INSTALLATION' 
+      });
+      return;
+    }
+    
+    const bins = await Bin.find({ status: status });
+    res.status(200).json(bins);
+  } catch (error) {
+    console.error('[Backend] Error fetching bins by status:', error);
+    res.status(500).json({ message: 'Failed to fetch bins by status.' });
+  }
+};
+
+// Add a function to update a bin's status
+export const updateBinStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { binId } = req.params;
+    const { status } = req.body;
+    
+    console.log(`[Backend] Updating status for bin ${binId} to ${status}`);
+    
+    if (!['ACTIVE', 'MAINTENANCE', 'INACTIVE', 'PENDING_INSTALLATION'].includes(status)) {
+      res.status(400).json({ 
+        message: 'Invalid status. Must be one of: ACTIVE, MAINTENANCE, INACTIVE, PENDING_INSTALLATION' 
+      });
+      return;
+    }
+    
+    const updatedBin = await Bin.findByIdAndUpdate(
+      binId,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedBin) {
+      console.log(`[Backend] Bin ${binId} not found for status update`);
+      res.status(404).json({ message: 'Bin not found' });
+      return;
+    }
+
+    console.log(`[Backend] Successfully updated bin ${binId} status to ${status}`);
+    res.status(200).json({
+      success: true,
+      bin: updatedBin
+    });
+  } catch (error) {
+    console.error('[Backend] Error updating bin status:', error);
+    res.status(500).json({ message: 'Failed to update bin status.' });
   }
 };

@@ -10,6 +10,7 @@ export interface IBin extends Document {
   area: Schema.Types.ObjectId;
   wasteType: string;
   address?: string; // Adding address field
+  status?: 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE' | 'PENDING_INSTALLATION';
 }
 
 const binSchema = new Schema<IBin>({
@@ -21,7 +22,12 @@ const binSchema = new Schema<IBin>({
   lastCollected: { type: Date, default: Date.now },
   area: { type: Schema.Types.ObjectId, ref: 'Area' },
   wasteType: { type: String, required: true },
-  address: { type: String } // Adding address field to schema
+  address: { type: String }, // Adding address field to schema
+  status: { 
+    type: String, 
+    enum: ['ACTIVE', 'MAINTENANCE', 'INACTIVE', 'PENDING_INSTALLATION'],
+    default: 'ACTIVE'
+  }
 });
 
 binSchema.index({ location: '2dsphere' }); // Important for geo queries

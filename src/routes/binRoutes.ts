@@ -8,7 +8,11 @@ import {
   assignBinToArea, 
   collectBin,
   updateBinFillLevel,
-  directUpdateBin
+  directUpdateBin,
+  getBinsByWasteType,
+  updateBinWasteType,
+  getBinsByStatus,
+  updateBinStatus
 } from '../controllers/binController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
@@ -19,6 +23,14 @@ const router = express.Router();
 router.post('/create', createBin);
 router.post('/update', updateBin);
 router.get('/', getBins);
+
+// Waste type related routes
+router.get('/waste-type/:wasteType', getBinsByWasteType);
+router.put('/:binId/waste-type', updateBinWasteType);
+
+// Status related routes
+router.get('/status/:status', getBinsByStatus);
+router.put('/:binId/status', updateBinStatus);
 
 // New endpoints
 router.get('/:binId', getBinDetails);
