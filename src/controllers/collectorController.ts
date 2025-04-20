@@ -574,3 +574,65 @@ export const getCollectorSchedules = async (req: Request, res: Response): Promis
     });
   }
 };
+
+/**
+ * Update schedule status by collector
+ * This allows collectors to update the status of their assigned schedules
+ */
+export const updateCollectorScheduleStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { scheduleId } = req.params;
+    const { status } = req.body;
+    
+    // Validate status value
+    if (!['scheduled', 'in-progress', 'completed', 'cancelled'].includes(status)) {
+      res.status(400).json({ 
+        message: 'Invalid status. Must be scheduled, in-progress, completed, or cancelled' 
+      });
+      return;
+    }
+    
+    // Find the schedule and check if it belongs to this collector
+    const schedule = await Schedule.findById(scheduleId);
+    
+    if (!schedule) {
+      res.status(404).json({ message: 'Schedule not found' });
+      return;
+    }
+    
+    // Verify the schedule belongs to the authenticated collector
+    if (schedule.collectorId?.toString() !== req.user?.id) {
+      res.status(403).json({ 
+        message: 'You are not authorized to update this schedule' 
+      });
+      return;
+    }
+    
+    // Update the schedule status
+    if (status === 'in-progress' && schedule.status === 'scheduled') {
+      // When starting collection, record the actual start time
+      schedule.status = status;
+      schedule.actualStartTime = new Date();  // Use Date object, not string
+    } else if (status === 'completed' && ['scheduled', 'in-progress'].includes(schedule.status)) {
+      // When completing collection, record the actual end time
+      schedule.status = status;
+      schedule.actualEndTime = new Date();  // Use Date object, not string
+    } else {
+      // For other status updates, just update the status
+      schedule.status = status;
+    }
+    
+    await schedule.save();
+    
+    res.json({
+      message: `Schedule status updated to ${status}`,
+      schedule
+    });
+  } catch (error) {
+    console.error('Error updating schedule status:', error);
+    res.status(500).json({ 
+      message: 'Failed to update schedule status',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};

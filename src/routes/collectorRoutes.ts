@@ -14,7 +14,8 @@ import {
     getActiveCollectors,
     updateCollectorEfficiency,
     getCollectorEfficiencyStats,
-    getCollectorSchedules
+    getCollectorSchedules,
+    updateCollectorScheduleStatus
 } from '../controllers/collectorController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -28,6 +29,8 @@ router.get('/area', auth, requireRole('collector'), getCollectorArea);
 router.get('/location', auth, requireRole('collector'), getLocation);
 router.post('/location', auth, requireRole('collector'), updateLocation);
 router.get('/schedules', auth, requireRole('collector'), getCollectorSchedules);
+// New route for collectors to update their schedule status
+router.put('/schedules/:scheduleId/status', auth, requireRole('collector'), updateCollectorScheduleStatus);
 
 // Admin management routes
 router.post('/assign', auth, requireRole('admin'), assignCollectorToArea);
