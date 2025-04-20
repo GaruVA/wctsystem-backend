@@ -9,6 +9,7 @@ import Schedule from '../models/Schedule';
 import BinSuggestion from '../models/BinSuggestion';
 import { getFormattedAddress } from '../services/geocodingService';
 import { addDays, format } from 'date-fns';
+import Alert from '../models/Alert';
 
 const seedData = async () => {
   try {
@@ -21,6 +22,7 @@ const seedData = async () => {
     await Bin.deleteMany({});
     await Issue.deleteMany({});
     await Schedule.deleteMany({});
+    await Alert.deleteMany({});
 
     // Create Admin
     const admin = new Admin({
@@ -475,7 +477,7 @@ const seedData = async () => {
         status: 'inactive',
         efficiency: 55, // Lower performer
         lastActive: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-        area: areas[1]._id,
+        area: null,
         currentLocation: {
           type: 'Point',
           coordinates: [79.87065509415085, 6.8758554775313955] // Inside Pamankada West
