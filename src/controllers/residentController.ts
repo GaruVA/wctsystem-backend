@@ -34,9 +34,10 @@ export const getNearbyBins = async (req: Request, res: Response): Promise<void> 
           $maxDistance: radiusInMeters, // Distance in meters
         },
       },
+      status: 'ACTIVE' // Only return ACTIVE bins
     });
     
-    console.log(`Found ${bins.length} bins within the specified radius`);
+    console.log(`Found ${bins.length} active bins within the specified radius`);
     if (bins.length > 0) {
       console.log('Sample bin data:', JSON.stringify(bins[0], null, 2));
     }
@@ -57,10 +58,10 @@ export const getBinDetails = async (req: Request, res: Response): Promise<void> 
   try {
     const { binId } = req.params;
 
-    const bin = await Bin.findById(binId);
+    const bin = await Bin.findOne({ _id: binId, status: 'ACTIVE' });
     
     if (!bin) {
-      res.status(404).json({ message: 'Bin not found' });
+      res.status(404).json({ message: 'Bin not found or not active' });
       return;
     }
 
