@@ -2,9 +2,10 @@ import { Request, Response } from 'express';
 import BinSuggestion from '../models/BinSuggestion';
 import { getFormattedAddress } from '../services/geocodingService';
 
+// binSuggestionController.ts - update the createBinSuggestion function
 export const createBinSuggestion = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { reason, location } = req.body; // location should include longitude and latitude
+    const { reason, location } = req.body; // location includes latitude and longitude
     
     // Generate address from coordinates
     let address = undefined;
@@ -12,14 +13,18 @@ export const createBinSuggestion = async (req: Request, res: Response): Promise<
       address = await getFormattedAddress([location.longitude, location.latitude]);
     }
     
-    const suggestion = await BinSuggestion.create({ 
-      reason, 
-      location,
+    const suggestion = await BinSuggestion.create({
+      reason,
+      location: {
+        longitude: location.longitude,
+        latitude: location.latitude
+      },
       address
     });
     
     res.status(201).json({ message: 'Bin suggestion created successfully', suggestion });
   } catch (error) {
+    console.error('Error creating bin suggestion:', error);
     res.status(500).json({ message: 'Failed to create bin suggestion', error });
   }
 };
