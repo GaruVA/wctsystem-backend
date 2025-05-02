@@ -131,6 +131,16 @@ const seedData = async () => {
     ];
     const areas = await Area.insertMany(areaData) as unknown as IArea[];
 
+    // Generate a random date within the past 10 days
+    const getRandomDateWithinLast10Days = () => {
+      const now = new Date();
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(now.getDate() - 10);
+
+      const randomTimestamp = Math.random() * (now.getTime() - tenDaysAgo.getTime()) + tenDaysAgo.getTime();
+      return new Date(randomTimestamp);
+    };
+
     // Create Bins positioned exactly on streets
     const binsData: Partial<IBin>[] = [
       // Bins for Wellawatte South (area[0])
@@ -139,112 +149,128 @@ const seedData = async () => {
         fillLevel: 45,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'INACTIVE'
+        status: 'INACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86064470036273, 6.8717394576604445] },
         fillLevel: 80,
         area: areas[0]._id as Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.85907829040463, 6.8707381906946186] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.85924995176988, 6.870162993824585] },
         fillLevel: 65,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.85970056285372, 6.869246938113764] },
         fillLevel: 75,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.85980785120702, 6.868437399040273] },
         fillLevel: 25,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86163175321305, 6.867798288272194] },
         fillLevel: 90,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.859872224219, 6.866392241560089] },
         fillLevel: 60,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86206090662623, 6.866733101750666] },
         fillLevel: 55,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86109531144658, 6.86558269762886] },
         fillLevel: 70,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86199653358216, 6.864980864716436] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86220038145342, 6.862839824711644] },
         fillLevel: 85,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86406719893873, 6.8658223653988] },
         fillLevel: 30,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86422813146355, 6.867974043853853] },
         fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86521518431388, 6.869001946205984] },
         fillLevel: 95,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86328399395457, 6.868682391308538] },
         fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
 
       // Bins for Pamankada West (area[1])
@@ -253,142 +279,153 @@ const seedData = async () => {
         fillLevel: 95,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86351783760591, 6.871366762927869] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86645753848622, 6.872027172417887] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86321743021668, 6.872282814554834] },
         fillLevel: 40,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86635025013291, 6.873113650550462] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86319597254602, 6.873177560951526] },
         fillLevel: 30,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'MAINTENANCE'
+        status: 'MAINTENANCE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86313159953404, 6.874136215936151] },
         fillLevel: 50,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86540611262393, 6.87437055352718] },
         fillLevel: 65,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.876884349513849] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'MAINTENANCE'
+        status: 'MAINTENANCE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.8679595755857, 6.878908158646716] },
         fillLevel: 75,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86785228723241, 6.874072305670325] },
         fillLevel: 25,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86967618923843, 6.875222689254078] },
         fillLevel: 90,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.87156446450749, 6.878695126555833] },
         fillLevel: 60,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.8725515173578, 6.875073565656626] },
         fillLevel: 80,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.87343128185485, 6.8747540148402] },
         fillLevel: 35,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.87319524747758, 6.8771399890813525] },
         fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'ORGANIC',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.87062032699848, 6.874945745355843] },
         fillLevel: 55,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.86963327414816, 6.877289112073571] },
         fillLevel: 45,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'GENERAL',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
       {
         location: { type: 'Point', coordinates: [79.87034137727991, 6.878673823337162] },
         fillLevel: 85,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        lastCollected: getRandomDateWithinLast10Days(), // Random date within the last 10 days
       },
-      // New bin from the 3rd suggestion - set to PENDING_INSTALLATION in Pamankada
-      {
-        location: { type: 'Point', coordinates: [79.86156423394904, 6.869208856216798] },
-        fillLevel: 0,
-        area: areas[0]._id as mongoose.Schema.Types.ObjectId, // Pamankada area
-        wasteType: 'GENERAL',
-        status: 'PENDING_INSTALLATION'
-      }
     ];
     
     // Process bins to add addresses
@@ -710,20 +747,20 @@ const seedData = async () => {
           [79.866586, 6.873803], [79.866722, 6.873849], [79.867208, 6.87399],
           [79.867394, 6.874041], [79.867582, 6.874079], [79.867856, 6.874084],
           [79.868015, 6.874059], [79.868947, 6.874074], [79.868969, 6.874098],
-          [79.869078, 6.874515], [79.869137, 6.874552], [79.8697, 6.874539],
-          [79.869666, 6.874766], [79.869639, 6.875234], [79.869668, 6.875245],
-          [79.870297, 6.875476], [79.870163, 6.875974], [79.870072, 6.876219],
-          [79.869885, 6.87661], [79.869794, 6.876739], [79.869542, 6.877057],
-          [79.869513, 6.877138], [79.869487, 6.877225], [79.869473, 6.877311],
-          [79.869429, 6.877748], [79.869414, 6.877983], [79.869405, 6.878062],
-          [79.869399, 6.878151], [79.869371, 6.878591], [79.869431, 6.878594],
-          [79.870115, 6.878639], [79.870341, 6.878674], [79.870115, 6.878639],
-          [79.869431, 6.878594], [79.869445, 6.878332], [79.869461, 6.878063],
-          [79.869489, 6.877755], [79.869529, 6.87732], [79.869542, 6.877273],
-          [79.869551, 6.87724], [79.8696, 6.877088], [79.869849, 6.876776],
-          [79.869964, 6.876822], [79.870308, 6.87685], [79.87048, 6.8769],
-          [79.870531, 6.876943], [79.870583, 6.876986], [79.870842, 6.877236],
-          [79.871009, 6.877409], [79.871009, 6.877417]
+          [79.869078, 6.874515], [79.869137, 6.874552],
+          [79.8697, 6.874539], [79.869666, 6.874766], [79.869639, 6.875234],
+          [79.869668, 6.875245], [79.870297, 6.875476], [79.870163, 6.875974],
+          [79.870072, 6.876219], [79.869885, 6.87661], [79.869794, 6.876739],
+          [79.869542, 6.877057], [79.869513, 6.877138], [79.869487, 6.877225],
+          [79.869473, 6.877311], [79.869429, 6.877748], [79.869414, 6.877983],
+          [79.869405, 6.878062], [79.869399, 6.878151], [79.869371, 6.878591],
+          [79.869431, 6.878594], [79.870115, 6.878639], [79.870341, 6.878674],
+          [79.870115, 6.878639], [79.869431, 6.878594], [79.869445, 6.878332],
+          [79.869461, 6.878063], [79.869489, 6.877755], [79.869529, 6.87732],
+          [79.869542, 6.877273], [79.869551, 6.87724], [79.8696, 6.877088],
+          [79.869849, 6.876776], [79.869964, 6.876822], [79.870308, 6.87685],
+          [79.87048, 6.8769], [79.870531, 6.876943], [79.870583, 6.876986],
+          [79.870842, 6.877236], [79.871009, 6.877409], [79.871009, 6.877417]
         ],
         distance: 1.5,
         duration: 36,

@@ -3,6 +3,9 @@ import Schedule, { ISchedule } from '../models/Schedule';
 import Area from '../models/Area';
 import Collector from '../models/Collector';
 import mongoose, { Schema } from 'mongoose';
+import Bin from '../models/Bin';
+import { format } from 'date-fns';
+import * as routeOptimizationService from '../services/routeOptimizationService';
 
 /**
  * Create a new collection route schedule
@@ -427,6 +430,192 @@ export const getWeeklyScheduleOverview = async (req: Request, res: Response): Pr
     res.status(500).json({ 
       message: 'Failed to get weekly schedule overview', 
       error: error.message 
+    });
+  }
+};
+
+/**
+ * Auto-generate a schedule for an area based on a specific waste type that needs attention
+ * Called automatically when alerts for specific waste types reach critical levels
+ */
+export const autoGenerateSchedule = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { areaId, wasteType } = req.body;
+
+    // Validate input
+    if (!areaId || !wasteType) {
+      res.status(400).json({
+        success: false,
+        message: 'Area ID and waste type are required'
+      });
+      return;
+    }
+
+    // Check if area exists
+    const area = await Area.findById(areaId);
+    if (!area) {
+      res.status(404).json({
+        success: false,
+        message: 'Area not found'
+      });
+      return;
+    }
+
+    // Check if waste type is valid
+    const validWasteTypes = ['GENERAL', 'ORGANIC', 'RECYCLE', 'HAZARDOUS'];
+    if (!validWasteTypes.includes(wasteType)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid waste type'
+      });
+      return;
+    }
+
+    // Check if there's already a pending schedule for this area and waste type
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const existingSchedule = await Schedule.findOne({
+      areaId,
+      wasteType,
+      date: { $gte: tomorrow, $lte: nextWeek },
+      status: { $in: ['scheduled', 'in-progress'] }
+    });
+
+    if (existingSchedule) {
+      res.status(200).json({
+        success: true,
+        message: `A schedule for ${wasteType} collection in this area already exists for ${format(existingSchedule.date, 'EEEE, MMMM d')}`,
+        existingSchedule
+      });
+      return;
+    }
+
+    // Get all bins of the specified waste type in the area
+    const bins = await Bin.find({
+      area: areaId,
+      wasteType,
+      status: { $in: ['ACTIVE', 'MAINTENANCE'] }, // Only include active or maintenance bins
+    }).lean();
+
+    if (bins.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: `No ${wasteType} bins found in the area`
+      });
+      return;
+    }
+
+    // Find available collector for this area
+    const collector = await Collector.findOne({ 
+      area: areaId,
+      status: 'active'
+    });
+
+    if (!collector) {
+      res.status(400).json({
+        success: false,
+        message: 'No active collectors assigned to this area'
+      });
+      return;
+    }
+
+    // Get area start and end locations for route planning
+    const startLocation = area.startLocation?.coordinates || [0, 0];
+    const endLocation = area.endLocation?.coordinates || [0, 0];
+
+    // Extract bin locations for route optimization
+    const binLocations = bins.map(bin => {
+      if (bin.location && bin.location.coordinates) {
+        return {
+          id: bin._id.toString(),
+          location: bin.location.coordinates as [number, number]
+        };
+      }
+      return null;
+    }).filter(bin => bin !== null);
+
+    if (binLocations.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Could not extract valid bin locations for route planning'
+      });
+      return;
+    }
+
+    try {
+      // Calculate optimized route using RouteOptimizationService
+      const routeResult = await routeOptimizationService.createOptimalRoute(
+        startLocation as [number, number],
+        binLocations.map(bin => bin!.location),
+        endLocation as [number, number],
+        bins // Pass the actual bins with fill levels for accurate duration calculation
+      );
+
+      // Set schedule time to tomorrow morning
+      const scheduleDate = new Date(tomorrow);
+      const scheduleStartTime = new Date(tomorrow);
+      scheduleStartTime.setHours(8, 0, 0, 0); // 8:00 AM
+      
+      // Duration is now directly usable from the route optimization service
+      const scheduleDuration = routeResult.duration as number;
+      
+      const scheduleEndTime = new Date(scheduleStartTime);
+      scheduleEndTime.setMinutes(scheduleEndTime.getMinutes() + scheduleDuration);
+
+      // Create bin sequence from the stops_sequence
+      // Map the bin IDs based on the stops_sequence from the route optimization
+      const binSequence = (routeResult.stops_sequence || []).map((stopIndex: number) => {
+        const binLocation = binLocations[stopIndex];
+        return binLocation ? new mongoose.Types.ObjectId(binLocation.id) : null;
+      }).filter((id): id is mongoose.Types.ObjectId => id !== null);
+
+      // Create schedule name
+      const scheduleName = `${format(scheduleDate, 'EEEE, MMM d')} - ${area.name} (${wasteType})`;
+
+      // Create new schedule
+      const newSchedule = new Schedule({
+        name: scheduleName,
+        areaId: areaId,
+        collectorId: collector._id,
+        date: scheduleDate,
+        startTime: scheduleStartTime,
+        endTime: scheduleEndTime,
+        status: 'scheduled',
+        wasteType: wasteType,
+        route: routeResult.route,
+        distance: routeResult.distance,
+        duration: scheduleDuration,
+        binSequence: binSequence,
+        notes: `Auto-generated schedule for ${wasteType} waste collection due to high fill levels`
+      });
+
+      await newSchedule.save();
+
+      res.status(201).json({
+        success: true,
+        message: `Schedule automatically generated for ${wasteType} collection in ${area.name} for ${format(scheduleDate, 'EEEE, MMMM d')}`,
+        schedule: newSchedule
+      });
+    } catch (error) {
+      console.error('Error optimizing route:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate an optimal route',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return;
+    }
+  } catch (error) {
+    console.error('Error auto-generating schedule:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to auto-generate schedule',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };

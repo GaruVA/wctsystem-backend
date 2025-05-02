@@ -2,10 +2,9 @@ import { Request, Response } from 'express';
 import Area from '../models/Area';
 import Bin, { IBin } from '../models/Bin';
 import mongoose, { Schema } from 'mongoose';
-import { optimizeRoute } from '../services/routeOptimizationService';
+import { createOptimalRoute } from '../services/routeOptimizationService';
 import Schedule, { ISchedule } from '../models/Schedule';
 import Collector from '../models/Collector';
-import { calculateRouteMetrics } from '../utils/routeCalculations'; // Import our custom calculation utility
 
 /**
  * Generate an optimized collection route for a specific area
@@ -88,11 +87,12 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     // Extract coordinates for optimization
     const binCoordinates = eligibleBins.map(bin => bin.location.coordinates as [number, number]);
     
-    // Optimize the route
-    const optimizedRoute = await optimizeRoute(
+    // Optimize the route, passing bins for accurate duration calculation
+    const optimizedRoute = await createOptimalRoute(
       startLocation as [number, number],
       binCoordinates,
-      endLocation as [number, number]
+      endLocation as [number, number],
+      eligibleBins
     );
     
     // Map the original bin IDs to the optimized sequence
@@ -109,27 +109,9 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
       binSequence = orderedBins.map(bin => (bin._id as mongoose.Types.ObjectId).toString());
     }
     
-    // Build the full route coordinates (start → bins → end)
-    const fullRouteCoordinates: [number, number][] = [
-      startLocation as [number, number],
-      ...orderedBins.map(bin => bin.location.coordinates as [number, number]),
-      endLocation as [number, number]
-    ];
-    
-    // Calculate realistic metrics using our custom algorithm
-    const customMetrics = calculateRouteMetrics(fullRouteCoordinates, orderedBins);
-    
-    // Clone the ORS route output but replace with our custom metrics
-    const routeWithCustomMetrics = {
-      ...optimizedRoute,
-      // Use our custom metrics (already in km and minutes)
-      distance: customMetrics.distance,
-      duration: customMetrics.duration
-    };
-    
-    // Return the optimized route with bin sequence and custom metrics
+    // Return the optimized route with bin sequence - metrics are already calculated
     res.status(200).json({
-      route: routeWithCustomMetrics,
+      route: optimizedRoute,
       binSequence
     });
   } catch (error: any) {

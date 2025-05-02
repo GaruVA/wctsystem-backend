@@ -15,6 +15,7 @@ import settingsRoutes from './routes/settingsRoutes';
 import alertRoutes from './routes/alertRoutes';
 import binSuggestionRoutes from './routes/binSuggestionRoutes';
 import scheduler from './services/scheduler';
+import aiRoutes from "./routes/aiRoutes";
 
 // Import models to ensure they're registered with Mongoose
 import './models/Admin';
@@ -48,6 +49,7 @@ app.use('/api/issue', issueRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/bin-suggestions', binSuggestionRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

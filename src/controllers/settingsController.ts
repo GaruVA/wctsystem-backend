@@ -1,5 +1,23 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import Settings, { ISettings } from '../models/Settings';
+
+/**
+ * Generate a new system token with no expiration
+ */
+const generateSystemToken = (): string => {
+  const secretKey = process.env.JWT_SECRET || 'your_jwt_secret';
+  
+  // Create a system payload that identifies this as a system token
+  const systemPayload = {
+    id: '0',
+    role: 'admin',
+    // No exp (expiration) field, making this a non-expiring token
+  };
+  
+  // Sign the token without an expiration
+  return jwt.sign(systemPayload, secretKey);
+};
 
 /**
  * Get application settings
@@ -42,7 +60,8 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
       settings = new Settings({
         systemName,
         adminEmail,
-        notifications: notifications || {}
+        notifications: notifications || {},
+        systemToken: generateSystemToken() // Generate token for new settings
       });
     } else {
       // Update fields
@@ -55,6 +74,12 @@ export const updateSettings = async (req: Request, res: Response): Promise<void>
           ...settings.notifications,
           ...notifications
         };
+      }
+      
+      // Regenerate system token if requested or if it doesn't exist
+      if (!settings.systemToken) {
+        settings.systemToken = generateSystemToken();
+        console.log('System token has been generated');
       }
     }
 

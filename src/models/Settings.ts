@@ -3,6 +3,7 @@ import { Schema, model, Document, Model } from 'mongoose';
 export interface ISettings extends Document {
   systemName: string;
   adminEmail: string;
+  systemToken: string; // Added system token for internal API calls
   notifications: {
     enabled: boolean;
     criticalThreshold: number;
@@ -29,6 +30,10 @@ const settingsSchema = new Schema<ISettings, SettingsModel>({
     type: String,
     required: true,
     default: 'admin@wctsystem.com'
+  },
+  systemToken: {
+    type: String,
+    description: 'JWT token for internal system API calls with no expiration'
   },
   notifications: {
     enabled: {
