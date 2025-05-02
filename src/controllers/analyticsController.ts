@@ -6,21 +6,45 @@ import Schedule from '../models/Schedule';
 
 export const getFillLevelTrends = async (req: Request, res: Response): Promise<void> => {
   try {
-    const bins = await Bin.find().select('fillLevel area lastCollected wasteType').populate('area', 'name');
-    const trends = bins.reduce((acc, bin) => {
-      const areaName = (bin.area as any).name;
+    const now = new Date();
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(now.getDate() - 10);
+
+    console.log("Fetching bins collected between:", tenDaysAgo, "and", now);
+
+    // Fetch bins with their fill levels, lastCollected dates, and areas within the last 10 days
+    const bins = await Bin.find({
+      lastCollected: { $gte: tenDaysAgo, $lte: now },
+    })
+      .select('fillLevel lastCollected area')
+      .populate('area', 'name'); // Populate area name
+
+    console.log("Fetched bins:", bins);
+
+    if (!Array.isArray(bins)) {
+      throw new Error("Expected bins to be an array");
+    }
+
+    // Group bins by area
+    const transformedTrends = bins.reduce((acc, bin) => {
+      const date = new Date(bin.lastCollected).toISOString().split('T')[0]; // Extract the date (YYYY-MM-DD)
+      const areaName = (bin.area as any)?.name || 'Unassigned'; // Get area name or default to 'Unassigned'
+
       if (!acc[areaName]) {
         acc[areaName] = [];
       }
+
       acc[areaName].push({
         fillLevel: bin.fillLevel,
-        lastCollected: bin.lastCollected,
-        wasteType: bin.wasteType
+        lastCollected: date,
       });
-      return acc;
-    }, {} as Record<string, { fillLevel: number; lastCollected: Date; wasteType: string }[]>);
 
-    res.json(trends);
+      return acc;
+    }, {} as Record<string, { fillLevel: number; lastCollected: string }[]>);
+
+    console.log("Transformed trends:", transformedTrends);
+
+    res.json(transformedTrends);
   } catch (error) {
     console.error('Error fetching fill level trends:', error);
     res.status(500).json({ message: 'Server error' });
@@ -31,6 +55,10 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
   try {
     const bins = await Bin.find().select('fillLevel area lastCollected wasteType').populate('area', 'name');
     
+    if (!Array.isArray(bins)) {
+      throw new Error("Expected bins to be an array");
+    }
+
     // Group analytics by both area and waste type
     const analytics = bins.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
@@ -96,6 +124,10 @@ export const getAnalyticsByWasteType = async (req: Request, res: Response): Prom
     const bins = await Bin.find().select('fillLevel wasteType lastCollected');
     console.log(`Fetched ${bins.length} bins for waste type analytics`); // Debug log
 
+    if (!Array.isArray(bins)) {
+      throw new Error("Expected bins to be an array");
+    }
+
     if (bins.length === 0) {
       res.status(404).json({ message: 'No bins found' });
     }
@@ -151,12 +183,16 @@ export const getAreaStatusOverview = async (req: Request, res: Response): Promis
       // Get bins in this area
       const bins = await Bin.find({ area: area._id }).select('fillLevel wasteType');
       
+      if (!Array.isArray(bins)) {
+        throw new Error("Expected bins to be an array");
+      }
+
       // Calculate average fill level
       const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
       const averageFillLevel = bins.length > 0 ? totalFillLevel / bins.length : 0;
       
       // Count critical bins (> 80% full)
-      const criticalBins = bins.filter(bin => bin.fillLevel > 80).length;
+      const criticalBins = bins.filter(bin => bin.fillLevel > 70).length;
       
       // Count bins by waste type
       const wasteTypeCounts: Record<string, number> = {};
@@ -220,6 +256,10 @@ export const getCollectionEfficiencyAndBinUtilization = async (req: Request, res
     const bins = await Bin.find({ lastCollected: { $gte: startOfMonth } })
       .populate('area', 'name')
       .select('fillLevel area lastCollected');
+
+    if (!Array.isArray(bins)) {
+      throw new Error("Expected bins to be an array");
+    }
 
     // Group data by area
     const areaData = bins.reduce((acc, bin) => {
