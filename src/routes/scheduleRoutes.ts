@@ -6,7 +6,8 @@ import {
   updateSchedule, 
   deleteSchedule,
   assignCollector,
-  getWeeklyScheduleOverview
+  getWeeklyScheduleOverview,
+  autoGenerateSchedule
 } from '../controllers/scheduleController';
 import { auth, requireRole } from '../middleware/auth';
 
@@ -32,5 +33,8 @@ router.delete('/:id', auth, requireRole('admin'), deleteSchedule);
 
 // Route for assigning a collector to a schedule
 router.post('/:scheduleId/assign', auth, requireRole('admin'), assignCollector);
+
+// Auto-generate schedule route - system use for alerts triggering
+router.post('/auto-generate', auth, requireRole('admin'), autoGenerateSchedule);
 
 export default router;

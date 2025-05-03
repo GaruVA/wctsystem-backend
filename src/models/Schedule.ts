@@ -17,6 +17,7 @@ export interface ISchedule extends Document {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  wasteType?: 'GENERAL' | 'ORGANIC' | 'RECYCLE' | 'HAZARDOUS'; // Added wasteType field
 }
 
 const scheduleSchema = new Schema<ISchedule>({
@@ -47,6 +48,11 @@ const scheduleSchema = new Schema<ISchedule>({
     type: String, 
     enum: ['scheduled', 'in-progress', 'completed', 'cancelled'], 
     default: 'scheduled' 
+  },
+  wasteType: {
+    type: String,
+    enum: ['GENERAL', 'ORGANIC', 'RECYCLE', 'HAZARDOUS'],
+    description: 'Primary waste type this schedule is focused on collecting'
   },
   // Route data fields
   route: {

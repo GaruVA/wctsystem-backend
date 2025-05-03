@@ -251,6 +251,7 @@ class NotificationService {
 
   /**
    * Helper function to create a new alert or update an existing one for area waste type fill levels
+   * For critical alerts, also triggers automatic schedule generation
    */
   async createOrUpdateAreaWasteTypeAlert(
     areaId: string,
@@ -283,6 +284,63 @@ class NotificationService {
           status: AlertStatus.UNREAD
         });
         console.log(`Created new ${severityText} alert for ${wasteType} bins in area ${areaName}`);
+      }
+
+      // For HIGH severity alerts, trigger auto-generation of schedule
+      if (severity === AlertSeverity.HIGH) {
+        try {
+          // Import axios for making the API request
+          const axios = require('axios');
+          
+          // Trigger auto-schedule generation
+          console.log(`Triggering auto-schedule generation for ${wasteType} bins in area ${areaId}`);
+          
+          // Get system token for authentication
+          const settings = await Settings.getInstance();
+          const systemToken = settings?.systemToken;
+          
+          if (!systemToken) {
+            console.error('No system token available for auto-schedule generation');
+            return;
+          }
+          
+          // Make the API call to auto-generate a schedule
+          const response = await axios.post(
+            `http://localhost:5000/api/schedules/auto-generate`,
+            {
+              areaId: areaId,
+              wasteType: wasteType
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${systemToken}`
+              }
+            }
+          );
+          
+          // Handle the response
+          if (response.data.success) {
+            console.log(`Auto-schedule generation successful: ${response.data.message}`);
+            
+            // Create notification about the auto-generated schedule
+            if (response.data.schedule) {
+              await Alert.create({
+                type: AlertType.AUTO_SCHEDULE,
+                title: 'Schedule Auto-Generated',
+                description: `A collection schedule has been automatically generated for ${wasteType} bins in ${areaName} due to critical fill levels.`,
+                severity: AlertSeverity.MEDIUM,
+                status: AlertStatus.UNREAD
+              });
+            }
+          } else if (response.data.existingSchedule) {
+            console.log(`Schedule already exists: ${response.data.message}`);
+          } else {
+            console.error(`Auto-schedule generation failed: ${response.data.message}`);
+          }
+        } catch (error) {
+          console.error('Error triggering auto-schedule generation:', error);
+        }
       }
     } catch (error) {
       console.error(`Error creating/updating alert for ${wasteType} bins in area ${areaName}:`, error);
