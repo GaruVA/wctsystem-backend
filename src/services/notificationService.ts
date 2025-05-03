@@ -77,7 +77,7 @@ class NotificationService {
   }
 
   /**
-   * Generate alerts based on area average fill levels
+   * Generate alerts based on area average fill levels for specific waste types
    */
   async checkAreaFillLevels(): Promise<void> {
     try {
@@ -93,35 +93,93 @@ class NotificationService {
       const criticalThreshold = settings.notifications.criticalThreshold;
       const warningThreshold = settings.notifications.warningThreshold;
       
-      console.log(`Checking area fill levels (Critical: ${criticalThreshold}%, Warning: ${warningThreshold}%)`);
+      console.log(`Checking area fill levels by waste type (Critical: ${criticalThreshold}%, Warning: ${warningThreshold}%)`);
       
       // Get all areas
       const areas = await Area.find().lean();
       
+      // Define waste types to check
+      const wasteTypes = ['GENERAL', 'ORGANIC', 'RECYCLE', 'HAZARDOUS'];
+      
       // Process each area
       for (const area of areas) {
-        // Get bins in this area
-        const bins = await Bin.find({ area: area._id }).select('fillLevel');
+        // Check each waste type separately
+        for (const wasteType of wasteTypes) {
+          // Get bins in this area of this waste type
+          const bins = await Bin.find({ 
+            area: area._id,
+            wasteType: wasteType
+          }).select('fillLevel');
+          
+          // Skip waste types with no bins
+          if (bins.length === 0) {
+            console.log(`Area ${area.name || area._id} has no ${wasteType} bins, skipping`);
+            continue;
+          }
+          
+          // Calculate average fill level for this waste type
+          const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
+          const averageFillLevel = Math.round(totalFillLevel / bins.length);
+          
+          console.log(`Area ${area.name || area._id}: Average ${wasteType} fill level ${averageFillLevel}%`);
+          
+          // Check if this area already has an unread alert for this waste type
+          const existingAlert = await Alert.findOne({
+            type: AlertType.AREA_FILL_LEVEL,
+            description: new RegExp(`Area ${area.name || `ID: ${area._id}`}.*${wasteType}\\b`)
+          });
+          
+          // Generate alerts based on thresholds
+          if (averageFillLevel >= criticalThreshold) {
+            // Critical area alert for this waste type
+            await this.createOrUpdateAreaWasteTypeAlert(
+              String(area._id), 
+              area.name || `ID: ${area._id}`, 
+              wasteType,
+              averageFillLevel, 
+              AlertSeverity.HIGH,
+              existingAlert
+            );
+          } else if (averageFillLevel >= warningThreshold) {
+            // Warning area alert for this waste type
+            await this.createOrUpdateAreaWasteTypeAlert(
+              String(area._id), 
+              area.name || `ID: ${area._id}`, 
+              wasteType,
+              averageFillLevel, 
+              AlertSeverity.MEDIUM,
+              existingAlert
+            );
+          } else if (existingAlert) {
+            // If area waste type is back to normal and there was an existing alert, mark it as read
+            existingAlert.status = AlertStatus.READ;
+            await existingAlert.save();
+            console.log(`Area ${area.name || area._id} ${wasteType} bins back to normal levels, marked alert as read`);
+          }
+        }
+        
+        // Also check overall average for the area (maintaining original functionality)
+        const allBins = await Bin.find({ area: area._id }).select('fillLevel');
         
         // Skip areas with no bins
-        if (bins.length === 0) {
+        if (allBins.length === 0) {
           console.log(`Area ${area.name || area._id} has no bins, skipping`);
           continue;
         }
         
-        // Calculate average fill level
-        const totalFillLevel = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
-        const averageFillLevel = Math.round(totalFillLevel / bins.length);
+        // Calculate overall average fill level
+        const totalFillLevel = allBins.reduce((sum, bin) => sum + bin.fillLevel, 0);
+        const averageFillLevel = Math.round(totalFillLevel / allBins.length);
         
-        console.log(`Area ${area.name || area._id}: Average fill level ${averageFillLevel}%`);
+        console.log(`Area ${area.name || area._id}: Overall average fill level ${averageFillLevel}%`);
         
-        // Check if this area already has an unread alert by exact area name
-        const existingAlert = await Alert.findOne({
+        // Check if this area already has an unread alert for overall average
+        const existingOverallAlert = await Alert.findOne({
           type: AlertType.AREA_FILL_LEVEL,
-          description: new RegExp(`Area ${area.name || `ID: ${area._id}`}\\b`)
+          description: new RegExp(`Area ${area.name || `ID: ${area._id}`} has reached .* average fill level\\b`)
         });
         
-        // Generate alerts based on thresholds
+        // Generate alerts based on thresholds for overall average
         if (averageFillLevel >= criticalThreshold) {
           // Critical area alert
           await this.createOrUpdateAreaAlert(
@@ -129,7 +187,7 @@ class NotificationService {
             area.name || `ID: ${area._id}`, 
             averageFillLevel, 
             AlertSeverity.HIGH,
-            existingAlert
+            existingOverallAlert
           );
         } else if (averageFillLevel >= warningThreshold) {
           // Warning area alert
@@ -138,13 +196,13 @@ class NotificationService {
             area.name || `ID: ${area._id}`, 
             averageFillLevel, 
             AlertSeverity.MEDIUM,
-            existingAlert
+            existingOverallAlert
           );
-        } else if (existingAlert) {
+        } else if (existingOverallAlert) {
           // If area is back to normal and there was an existing alert, mark it as read
-          existingAlert.status = AlertStatus.READ;
-          await existingAlert.save();
-          console.log(`Area ${area.name || area._id} back to normal levels, marked alert as read`);
+          existingOverallAlert.status = AlertStatus.READ;
+          await existingOverallAlert.save();
+          console.log(`Area ${area.name || area._id} back to normal overall levels, marked alert as read`);
         }
       }
     } catch (error) {
@@ -188,6 +246,46 @@ class NotificationService {
       }
     } catch (error) {
       console.error(`Error creating/updating alert for area ${areaName}:`, error);
+    }
+  }
+
+  /**
+   * Helper function to create a new alert or update an existing one for area waste type fill levels
+   */
+  async createOrUpdateAreaWasteTypeAlert(
+    areaId: string,
+    areaName: string,
+    wasteType: string,
+    fillLevel: number,
+    severity: AlertSeverity,
+    existingAlert: any
+  ): Promise<void> {
+    try {
+      const severityText = severity === AlertSeverity.HIGH ? 'critical' : 'warning';
+      const title = `${severity === AlertSeverity.HIGH ? 'Critical' : 'Warning'} ${wasteType} Bins Fill Level`;
+      const description = `Area ${areaName} has reached ${severityText} average fill level of ${fillLevel}% for ${wasteType} bins.`;
+      
+      if (existingAlert) {
+        // Update existing alert
+        existingAlert.title = title;
+        existingAlert.description = description;
+        existingAlert.severity = severity;
+        // Don't reset creation time to avoid duplication appearance in UI
+        await existingAlert.save();
+        console.log(`Updated ${severityText} alert for ${wasteType} bins in area ${areaName}`);
+      } else {
+        // Create new alert
+        await Alert.create({
+          type: AlertType.AREA_FILL_LEVEL,
+          title: title,
+          description: description,
+          severity: severity,
+          status: AlertStatus.UNREAD
+        });
+        console.log(`Created new ${severityText} alert for ${wasteType} bins in area ${areaName}`);
+      }
+    } catch (error) {
+      console.error(`Error creating/updating alert for ${wasteType} bins in area ${areaName}:`, error);
     }
   }
 
