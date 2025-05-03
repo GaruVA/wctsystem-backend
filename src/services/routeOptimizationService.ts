@@ -1,32 +1,36 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { IBin } from '../models/Bin';
 
 dotenv.config();
 const ORS_API_KEY = process.env.ORS_API_KEY;
 
-// If no API key is available, use a fallback algorithm
-const useOpenRouteService = ORS_API_KEY && ORS_API_KEY !== '';
+// Check if OpenRouteService is available
+const isOpenRouteServiceAvailable = Boolean(ORS_API_KEY);
+
+// ================ INTERFACES ================ //
 
 /**
- * Interface for the optimized route response
+ * Structure of a complete optimized route with path and metrics
  */
 export interface OptimizedRoute {
-  route: Array<[number, number]>; // The optimized route coordinates (polyline)
-  distance: string | number; // Total distance in meters or formatted string
-  duration: string | number; // Total duration in seconds or formatted string
-  stops_sequence?: number[]; // The sequence of stops in the optimized order
+  route: Array<[number, number]>;       // The complete path as coordinates [lon, lat]
+  distance: number;                     // Total distance in kilometers
+  duration: number;                     // Total duration in minutes
+  stops_sequence?: number[];            // Order of stops in the optimized sequence
 }
 
 /**
- * Interface for bin order optimization result
+ * Structure of the stop sequence optimization result
  */
-export interface OptimizedBinOrder {
-  optimizedStops: Array<[number, number]>; // The optimized order of stops
-  stops_sequence: number[]; // The sequence indices in the optimized order
-  estimatedDistance: number; // Estimated straight-line distance in meters
+interface StopSequenceResult {
+  orderedStops: Array<[number, number]>; // Coordinates in optimized order
+  stopIndexSequence: number[];           // Original indices in optimal order
 }
 
-// Define interfaces for ORS API responses
+/**
+ * OpenRouteService API response step
+ */
 interface ORSStep {
   type: string;
   job?: number;
@@ -34,91 +38,86 @@ interface ORSStep {
 }
 
 /**
- * Main function to optimize a collection route
- * This function handles both bin order optimization and route polyline creation
+ * Main function to create an optimized collection route
+ * 
+ * @param startPoint Starting point coordinates [longitude, latitude]
+ * @param binLocations Array of bin coordinates [longitude, latitude]
+ * @param endPoint Ending point coordinates [longitude, latitude]
+ * @param bins Optional array of bin objects for better duration calculation
+ * @returns Complete optimized route with path and metrics
  */
-export async function optimizeRoute(
-  start: [number, number], 
-  stops: Array<[number, number]>, 
-  end: [number, number]
+export async function createOptimalRoute(
+  startPoint: [number, number],
+  binLocations: Array<[number, number]>,
+  endPoint: [number, number],
+  bins?: IBin[]
 ): Promise<OptimizedRoute> {
   try {
-    // Step 1: Optimize the bin collection order
-    const optimizedOrder = await optimizeBinOrder(start, stops, end);
+    // Step 1: Find the optimal sequence to visit bins
+    const optimizedSequence = await findOptimalStopSequence(startPoint, binLocations, endPoint);
     
-    // Step 2: Generate the actual route polyline with optimized waypoints
-    const waypoints = [start, ...optimizedOrder.optimizedStops, end];
+    // Step 2: Generate the complete route path through all waypoints
+    const allWaypoints = [
+      startPoint, 
+      ...optimizedSequence.orderedStops, 
+      endPoint
+    ];
     
-    // Use OpenRouteService to get the detailed route if API key is available
-    if (useOpenRouteService) {
-      return await generateRoutePolyline(waypoints, optimizedOrder.stops_sequence);
-    } else {
-      // Basic fallback if no API key available - just return the waypoints
-      // Note: Actual distance and duration are calculated by the controller
-      // using the utility functions in routeCalculations.ts
-      return {
-        route: waypoints,
-        distance: 0, // Will be replaced by controller
-        duration: 0, // Will be replaced by controller
-        stops_sequence: optimizedOrder.stops_sequence
-      };
-    }
+    // Step 3: Generate detailed path between points
+    const routePath = await generateRoutePath(allWaypoints, optimizedSequence.stopIndexSequence);
+    
+    // Step 4: Calculate realistic distance and duration metrics
+    const metrics = calculateRouteMetrics(routePath, bins);
+    
+    // Return the complete route with all data
+    return {
+      route: routePath,
+      distance: metrics.distance,
+      duration: metrics.duration,
+      stops_sequence: optimizedSequence.stopIndexSequence
+    };
   } catch (error: any) {
     console.error('Route optimization error:', error);
-    throw new Error('Failed to optimize route: ' + error.message);
+    throw new Error('Failed to create optimal route: ' + error.message);
   }
 }
 
 /**
- * Optimize the order of bin collections to minimize travel distance
- * This function determines the optimal sequence of bins using ORS Optimization API
+ * Find the optimal sequence to visit all stops using OpenRouteService VRP solver
+ * 
+ * @param startPoint Starting depot coordinates [longitude, latitude]
+ * @param stops Array of collection point coordinates [longitude, latitude]
+ * @param endPoint Ending depot coordinates [longitude, latitude]
+ * @returns The optimal stop sequence and their coordinates in order
  */
-export async function optimizeBinOrder(
-  start: [number, number],
+async function findOptimalStopSequence(
+  startPoint: [number, number],
   stops: Array<[number, number]>,
-  end: [number, number]
-): Promise<OptimizedBinOrder> {
-  if (useOpenRouteService) {
-    try {
-      console.log('Using ORS Optimization API for bin order optimization');
-      return await optimizeWithORSApi(start, stops, end);
-    } catch (error) {
-      console.error('ORS Optimization API failed:', error);
-      throw new Error('Optimization service unavailable');
-    }
-  } else {
-    throw new Error('No ORS API key configured. Optimization service unavailable.');
+  endPoint: [number, number]
+): Promise<StopSequenceResult> {
+  // Verify API availability
+  if (!isOpenRouteServiceAvailable) {
+    throw new Error('Route optimization service unavailable: API key not configured');
   }
-}
 
-/**
- * Optimize bin order using ORS Optimization API
- * Uses the Vehicle Routing Problem (VRP) solver from ORS
- */
-async function optimizeWithORSApi(
-  start: [number, number],
-  stops: Array<[number, number]>,
-  end: [number, number]
-): Promise<OptimizedBinOrder> {
   try {
-    console.log(`Optimizing order for ${stops.length} bins using ORS API`);
+    console.log(`Optimizing route for ${stops.length} collection points`);
     
-    // Build the vehicles array - only one vehicle in our case
+    // Setup vehicle data (garbage truck)
     const vehicles = [{
       id: 1,
       profile: "driving-car",
-      start: start,
-      end: end
+      start: startPoint,
+      end: endPoint
     }];
     
-    // Build the jobs array - one job per bin
+    // Setup jobs (bin collection points)
     const jobs = stops.map((stop, index) => ({
-      id: index + 1, // Job IDs should start from 1
+      id: index + 1, // Job IDs start from 1
       location: stop
     }));
     
-    // Call ORS Optimization API
-    // The correct endpoint is /optimization, not /v2/optimization
+    // Call OpenRouteService Optimization API
     const response = await axios({
       method: 'post',
       url: 'https://api.openrouteservice.org/optimization',
@@ -127,69 +126,52 @@ async function optimizeWithORSApi(
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      data: {
-        jobs,
-        vehicles
-      }
+      data: { jobs, vehicles }
     });
     
-    console.log('ORS Optimization API response received');
+    const result = response.data;
     
-    // Extract the optimized sequence from the response
-    const optimizationResult = response.data;
-    
-    // If no routes were found, throw an error
-    if (!optimizationResult.routes || optimizationResult.routes.length === 0) {
-      throw new Error('No valid routes found by the optimization service');
+    // Verify that a valid route was found
+    if (!result.routes || result.routes.length === 0) {
+      throw new Error('No valid routes found by optimization service');
     }
     
-    // Extract the sequence of stops from the first route
-    const route = optimizationResult.routes[0];
+    // Extract the first route solution
+    const route = result.routes[0];
     
-    // Map the optimized sequence back to the original stops
-    const stops_sequence = route.steps
-      .filter((step: ORSStep) => step.type === 'job') // Only include job steps with explicit type
-      .map((step: ORSStep) => (step.job ?? 0) - 1); // Convert job ID back to 0-based index with fallback
+    // Extract sequence of bin stops (job steps)
+    const stopIndexSequence = route.steps
+      .filter((step: ORSStep) => step.type === 'job')
+      .map((step: ORSStep) => (step.job ?? 0) - 1); // Convert back to 0-based index
     
-    // Create the array of optimized stops in the correct order
-    const optimizedStops = stops_sequence.map((index: number) => stops[index]);
-    
-    // Extract the total distance from the response
-    const estimatedDistance = route.cost;
+    // Create ordered array of stops based on sequence
+    const orderedStops = stopIndexSequence.map((index: number) => stops[index]);
     
     return {
-      optimizedStops,
-      stops_sequence,
-      estimatedDistance
+      orderedStops,
+      stopIndexSequence
     };
   } catch (error) {
-    console.error('Error using ORS Optimization API:', error);
-    throw error;
+    console.error('OpenRouteService optimization error:', error);
+    throw new Error('Failed to optimize collection route sequence');
   }
 }
 
 /**
- * Generate route polyline using OpenRouteService API
+ * Generate detailed route path through all waypoints
+ * Returns either a detailed polyline or simple waypoint path
  */
-export async function generateRoutePolyline(
+async function generateRoutePath(
   waypoints: Array<[number, number]>,
-  stops_sequence: number[] = []
-): Promise<OptimizedRoute> {
+  stopIndexSequence: number[] = []
+): Promise<Array<[number, number]>> {
+  // If OpenRouteService is not available, just return waypoints
+  if (!isOpenRouteServiceAvailable) {
+    return waypoints;
+  }
+
   try {
-    console.log("Generating route polyline with", waypoints.length, "waypoints");
-    
-    // Build request data
-    const requestData = {
-      coordinates: waypoints,
-      instructions: true,
-      preference: 'recommended'
-    };
-    
-    // Log the ORS API request details
-    console.log('ORS API Request URL:', 'https://api.openrouteservice.org/v2/directions/driving-car/geojson');
-    console.log('ORS API Request Data:', JSON.stringify(requestData, null, 2));
-    
-    // Call ORS Directions API to get the route
+    // Get detailed path from OpenRouteService Directions API
     const response = await axios({
       method: 'post',
       url: 'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
@@ -198,41 +180,103 @@ export async function generateRoutePolyline(
         'Content-Type': 'application/json',
         'Accept': 'application/json, application/geo+json'
       },
-      data: requestData
+      data: {
+        coordinates: waypoints,
+        instructions: true,
+        preference: 'recommended'
+      }
     });
-
-    // Log response status
-    console.log("ORS API Response Status:", response.status);
     
-    const route = response.data;
-    const geometry = route.features[0].geometry.coordinates;
-    
-    // Return just the route geometry - distance and duration will be 
-    // calculated by the controller using the utility functions
-    return {
-      route: geometry,
-      distance: 0, // Will be replaced by controller
-      duration: 0, // Will be replaced by controller
-      stops_sequence
-    };
-  } catch (error: any) {
-    console.error('OpenRouteService API error:');
-    
-    if (axios.isAxiosError(error)) {
-      console.error('ORS API Request failed with status:', error.response?.status);
-      console.error('ORS API Error data:', JSON.stringify(error.response?.data || {}, null, 2));
-    } else {
-      console.error('Non-Axios error:', error.message);
-    }
-    
-    // If API fails, return a simplified route using the waypoints directly
-    console.log('Falling back to simplified polyline after API failure');
-    
-    return {
-      route: waypoints,
-      distance: 0, // Will be replaced by controller
-      duration: 0, // Will be replaced by controller
-      stops_sequence
-    };
+    // Extract the route geometry (array of coordinates)
+    return response.data.features[0].geometry.coordinates;
+  } catch (error) {
+    // On API failure, fall back to simple waypoints
+    console.error('Failed to generate detailed path:', error);
+    return waypoints;
   }
+}
+
+/**
+ * Calculate realistic route metrics for garbage collection
+ * Accounts for travel time between points and bin collection time
+ * 
+ * @param coordinates Route path as array of [lon, lat] coordinates
+ * @param bins Optional array of bin objects with fill levels
+ * @returns Distance in km and duration in minutes
+ */
+function calculateRouteMetrics(
+  coordinates: [number, number][],
+  bins?: IBin[]
+): { distance: number; duration: number } {
+  if (coordinates.length < 2) {
+    return { distance: 0, duration: 0 };
+  }
+  
+  // Collection parameters based on real-world data
+  const AVG_TRUCK_SPEED_KMH = 10;        // Average truck speed in urban areas
+  const BASE_COLLECTION_MINS = 5;         // Base time per bin
+  const FILL_LEVEL_TIME_FACTOR = 0.02;    // Additional time per fill %
+  
+  let totalDistanceKm = 0;
+  let totalDurationMins = 0;
+  
+  // Calculate distances and travel times between consecutive points
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const [lon1, lat1] = coordinates[i];
+    const [lon2, lat2] = coordinates[i + 1];
+    
+    // Calculate segment distance using Haversine formula
+    const segmentDistance = calculateDistance(lat1, lon1, lat2, lon2);
+    totalDistanceKm += segmentDistance;
+    
+    // Calculate travel time for this segment
+    const travelTimeMins = (segmentDistance / AVG_TRUCK_SPEED_KMH) * 60;
+    totalDurationMins += travelTimeMins;
+  }
+  
+  // Add bin collection times
+  if (bins && bins.length > 0) {
+    // Calculate collection time based on fill levels
+    const collectionTimeMins = bins.reduce((total, bin) => {
+      return total + BASE_COLLECTION_MINS + (bin.fillLevel * FILL_LEVEL_TIME_FACTOR);
+    }, 0);
+    
+    totalDurationMins += collectionTimeMins;
+  } else {
+    // Estimate collection time based on number of stops
+    const stopCount = Math.max(0, coordinates.length - 2);
+    totalDurationMins += stopCount * BASE_COLLECTION_MINS;
+  }
+  
+  // Apply minimum values and round appropriately
+  return {
+    distance: Math.max(0.01, Math.round(totalDistanceKm * 100) / 100),
+    duration: Math.max(1, Math.round(totalDurationMins))
+  };
+}
+
+/**
+ * Calculate distance between two points using Haversine formula
+ */
+function calculateDistance(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  // Convert degrees to radians
+  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+  const R = 6371; // Earth radius in km
+  
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  
+  return R * c; // Distance in kilometers
 }
