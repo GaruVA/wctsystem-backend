@@ -1,5 +1,5 @@
 import express from 'express';
-import { getFillLevelTrends, getAnalytics, getAreaStatusOverview, getCollectionEfficiencyAndBinUtilization, getAnalyticsByWasteType } from '../controllers/analyticsController';
+import { getFillLevelTrends, getAnalytics, getAreaStatusOverview, getCollectionEfficiencyAndBinUtilization, getAnalyticsByWasteType, getDashboardMetrics } from '../controllers/analyticsController';
 import { auth, requireRole } from '../middleware/auth';
 
 const router = express.Router();
@@ -9,5 +9,6 @@ router.get('/analytics', auth, requireRole('admin'), getAnalytics);
 router.get('/area-status', auth, requireRole('admin'), getAreaStatusOverview);
 router.get('/collection-efficiency-bin-utilization', auth, requireRole('admin'), getCollectionEfficiencyAndBinUtilization);
 router.get('/waste-type', auth, requireRole('admin'), getAnalyticsByWasteType);
+router.get('/dashboard-metrics', auth, requireRole('admin'), getDashboardMetrics);
 
 export default router;
