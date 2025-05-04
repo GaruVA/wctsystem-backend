@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Issue from '../models/Issue';
 import Bin from '../models/Bin';
-import { IUser } from '../types'; // Assuming you have a User type
 
 export const getIssues = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -18,7 +17,6 @@ export const getIssues = async (req: Request, res: Response): Promise<void> => {
 export const createIssue = async (req: Request, res: Response): Promise<void> => {
   try {
     const { binId, issueType, description, images, coordinates } = req.body;
-    const user = req.user as IUser; // Assuming you have authentication middleware
 
     // Find the bin to ensure it exists
     const bin = await Bin.findById(binId);
@@ -36,7 +34,7 @@ export const createIssue = async (req: Request, res: Response): Promise<void> =>
         type: 'Point',
         coordinates: coordinates || bin.location.coordinates
       },
-      reportedBy: user?._id
+      reportedBy: null 
     });
 
     const savedIssue = await newIssue.save();

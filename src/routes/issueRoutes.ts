@@ -10,7 +10,7 @@ import {
   getIssuesByBin,
   getIssueReportData
 } from '../controllers/issueController';
-import  authenticate from '../middleware/auth'; // Import authentication middleware
+import { auth, requireRole } from '../middleware/auth'; // Fixed import of auth middleware
 
 const router = express.Router();
 
@@ -18,15 +18,15 @@ const router = express.Router();
 router.get('/nearby', getIssuesNearby);
 
 // Protected routes
-router.get('/', authenticate, getIssues);
-router.post('/', authenticate, createIssue);
-router.patch('/:issueId/status', authenticate, updateIssueStatus);
+router.get('/', auth, requireRole('admin'), getIssues);
+router.post('/', createIssue);
+router.patch('/:issueId/status', auth, requireRole('admin'), updateIssueStatus);
 
 // MapScreen ReportSection routes
-router.get('/filter', authenticate, getIssuesByFilter);
-router.get('/summary', authenticate, getIssueSummary);
-router.get('/report-data', authenticate, getIssueReportData);
-router.get('/:issueId', authenticate, getIssueById);
-router.get('/bin/:binId', authenticate, getIssuesByBin);
+router.get('/filter', getIssuesByFilter);
+router.get('/summary', getIssueSummary);
+router.get('/report-data', getIssueReportData);
+router.get('/:issueId', getIssueById);
+router.get('/bin/:binId', getIssuesByBin);
 
 export default router;
