@@ -24,7 +24,8 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
       route,
       distance,
       duration,
-      binSequence
+      binSequence,
+      wasteType
     } = req.body;
 
     // Validate required fields
@@ -77,6 +78,11 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
     // Add notes if provided
     if (notes) {
       scheduleData.notes = notes;
+    }
+    
+    // Add waste type if provided
+    if (wasteType) {
+      scheduleData.wasteType = wasteType;
     }
 
     // Create and save the schedule
