@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface BinSuggestion extends Document {
   reason: string;
+  binType: string;
   location: {
     longitude: number;
     latitude: number;
@@ -12,6 +13,12 @@ export interface BinSuggestion extends Document {
 
 const binSuggestionSchema = new Schema<BinSuggestion>({
   reason: { type: String, required: true },
+  binType: { 
+    type: String, 
+    required: true,
+    enum: ['general', 'organic', 'recyclable', 'hazardous'],
+    default: 'general'
+  },
   location: {
     longitude: { type: Number, required: true },
     latitude: { type: Number, required: true },

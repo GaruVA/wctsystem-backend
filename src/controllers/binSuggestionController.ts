@@ -5,7 +5,7 @@ import { getFormattedAddress } from '../services/geocodingService';
 // binSuggestionController.ts - update the createBinSuggestion function
 export const createBinSuggestion = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { reason, location } = req.body; // location includes latitude and longitude
+    const { reason, location, binType } = req.body; // location includes latitude and longitude, including binType
     
     // Generate address from coordinates
     let address = undefined;
@@ -15,6 +15,7 @@ export const createBinSuggestion = async (req: Request, res: Response): Promise<
     
     const suggestion = await BinSuggestion.create({
       reason,
+      binType, // Save the bin type
       location: {
         longitude: location.longitude,
         latitude: location.latitude
