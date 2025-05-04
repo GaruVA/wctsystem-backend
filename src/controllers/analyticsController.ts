@@ -302,3 +302,41 @@ export const getCollectionEfficiencyAndBinUtilization = async (req: Request, res
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getDashboardMetrics = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    // Total bins and areas
+    const totalBins = await Bin.countDocuments();
+    const totalAreas = await Area.countDocuments();
+
+    // Today's date range
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+
+    // Collections today: count bins collected today
+    const binsCollectedToday = await Bin.countDocuments({
+      lastCollected: { $gte: todayStart, $lt: tomorrowStart }
+    });
+    
+    // Also count bins scheduled for today from the Schedule model
+    const schedulesForToday = await Schedule.countDocuments({
+      date: { $gte: todayStart, $lt: tomorrowStart },
+      status: { $in: ['scheduled', 'in-progress', 'completed'] }
+    });
+    
+    // Combined count for today's collections (actual + scheduled)
+    const collectionsToday = binsCollectedToday + schedulesForToday;
+
+    // Calculate average fill level across all bins
+    const bins = await Bin.find().select('fillLevel');
+    const totalFill = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
+    const fillLevelTrendToday = bins.length > 0 ? Math.round((totalFill / bins.length) * 100) / 100 : 0;
+
+    res.json({ totalBins, totalAreas, collectionsToday, fillLevelTrendToday });
+  } catch (error) {
+    console.error('Error fetching dashboard metrics:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
