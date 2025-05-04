@@ -45,7 +45,7 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/route-optimization', routeOptimizationRoutes);
-app.use('/api/issue', issueRoutes);
+app.use('/api/issues', issueRoutes); // Changed from '/api/issue' to '/api/issues' for consistency
 app.use('/api/settings', settingsRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/bin-suggestions', binSuggestionRoutes);

@@ -1,46 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import express from 'express';
+import { 
+  getIssues, 
+  createIssue, 
+  updateIssueStatus, 
+  getIssuesNearby 
+} from '../controllers/issueController';
+import { auth } from '../middleware/auth'; // Import authentication middleware
 
-dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET!;
+const router = express.Router();
 
-interface TokenPayload {
-  id: string;
-  role: string;
-}
+// Public routes
+router.get('/nearby', getIssuesNearby);
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: TokenPayload;
-    }
-  }
-}
+// Protected routes
+router.get('/', auth, getIssues);
+router.post('/', auth, createIssue);
+router.patch('/:issueId/status', auth, updateIssueStatus);
 
-export const auth = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'No token provided' });
-    return;
-  }
-  
-  const token = authHeader.split(' ')[1];
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
-    req.user = payload;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-};
-
-export const requireRole = (role: string) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== role) {
-      res.status(403).json({ message: 'Forbidden: insufficient permissions' });
-      return;
-    }
-    next();
-  };
-};
+export default router;
