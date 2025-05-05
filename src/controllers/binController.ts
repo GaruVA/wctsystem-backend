@@ -3,12 +3,12 @@ import Bin from '../models/Bin';
 import Issue from '../models/Issue';
 import Area from '../models/Area'; // Import the Area model
 import { getFormattedAddress } from '../services/geocodingService'; // Import geocoding service
-
+import { findAreaForBin } from '../services/geoSpatialService'; // Import the new geoSpatial service
 
 // Function to update bin data
 export const updateBin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { binId } = req.params;
-    const { fillLevel, location, wasteType, area, status } = req.body;
+    const { fillLevel, location, wasteType, status } = req.body;
 
     try {
         // Create update object
@@ -22,10 +22,6 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
             updateData.wasteType = wasteType;
         }
         
-        if (area) {
-            updateData.area = area;
-        }
-        
         if (status) {
             updateData.status = status;
         }
@@ -37,6 +33,11 @@ export const updateBin = async (req: Request, res: Response, next: NextFunction)
                 coordinates: location.coordinates
             };
             updateData.address = await getFormattedAddress(location.coordinates);
+            
+            // Auto-assign area based on coordinates
+            const areaId = await findAreaForBin(location.coordinates);
+            updateData.area = areaId; // Will be null if no area contains this point
+            console.log(`[Backend] Auto-assigned bin to area: ${areaId}`);
         }
         
         const updatedBin = await Bin.findByIdAndUpdate(
@@ -109,6 +110,22 @@ export const directUpdateBin = async (req: Request, res: Response): Promise<void
     
     console.log(`[Backend] Direct update for bin ${binId}:`, updates);
     
+    // Check if location is being updated
+    if (updates.location && updates.location.coordinates && 
+        Array.isArray(updates.location.coordinates) && 
+        updates.location.coordinates.length === 2) {
+      
+      // Auto-assign area based on new coordinates
+      const areaId = await findAreaForBin(updates.location.coordinates);
+      updates.area = areaId; // Will be null if not within any area
+      console.log(`[Backend] Auto-assigned bin to area: ${areaId || 'None (outside all areas)'}`);
+      
+      // Update address if needed
+      if (!updates.address) {
+        updates.address = await getFormattedAddress(updates.location.coordinates);
+      }
+    }
+    
     // Find and update the bin
     const updatedBin = await Bin.findByIdAndUpdate(
       binId,
@@ -135,7 +152,7 @@ export const directUpdateBin = async (req: Request, res: Response): Promise<void
 
 // Add new function to create bins
 export const createBin = async (req: Request, res: Response): Promise<void> => {
-    const { wasteType, location, area, status } = req.body;
+    const { wasteType, location, status } = req.body;
 
     try {
         // Validate location
@@ -150,6 +167,10 @@ export const createBin = async (req: Request, res: Response): Promise<void> => {
             address = await getFormattedAddress(location.coordinates);
         }
 
+        // Auto-assign area based on coordinates
+        const areaId = await findAreaForBin(location.coordinates);
+        console.log(`[Backend] Auto-assigned new bin to area: ${areaId || 'None (outside all areas)'}`);
+
         const newBin = new Bin({
             location: {
                 type: 'Point',
@@ -158,7 +179,7 @@ export const createBin = async (req: Request, res: Response): Promise<void> => {
             fillLevel: 0, // Initialize empty
             wasteType: wasteType || 'GENERAL', // Default to GENERAL if not specified
             address, // Add the address
-            area, // Optional area assignment
+            area: areaId, // Auto-assigned area (null if not within any area)
             status: status || 'ACTIVE' // Default to ACTIVE if not specified
         });
 
