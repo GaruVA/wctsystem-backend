@@ -82,9 +82,16 @@ export const createIssue = async (req: Request, res: Response): Promise<void> =>
   try {
     const { description, images } = req.body;
 
+    // Validate description
+    if (!description || !description.trim()) {
+      res.status(400).json({ message: 'Description is required' });
+      return;
+    }
+
     const newIssue = new Issue({
       description,
-      images: images || []
+      images: images || [],
+      status: 'pending'
     });
 
     const savedIssue = await newIssue.save();
@@ -100,8 +107,8 @@ export const updateIssueStatus = async (req: Request, res: Response): Promise<vo
     const { issueId } = req.params;
     const { status } = req.body;
 
-    if (!['pending', 'in-progress', 'resolved'].includes(status)) {
-      res.status(400).json({ message: 'Invalid status value' });
+    if (!['pending', 'resolved'].includes(status)) {
+      res.status(400).json({ message: 'Invalid status value. Must be either "pending" or "resolved"' });
       return;
     }
 

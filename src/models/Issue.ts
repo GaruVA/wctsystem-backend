@@ -3,7 +3,7 @@ import { Schema, model, Document } from 'mongoose';
 export interface IIssue extends Document {
   description: string;
   images: string[];
-  status: 'pending' | 'in-progress' | 'resolved';
+  status: 'pending' | 'resolved';
 }
 
 const issueSchema = new Schema<IIssue>({
@@ -11,7 +11,7 @@ const issueSchema = new Schema<IIssue>({
   images: [{ type: String }],
   status: {
     type: String,
-    enum: ['pending', 'in-progress', 'resolved'],
+    enum: ['pending', 'resolved'],
     default: 'pending'
   }
 }, { 
