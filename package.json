@@ -17,6 +17,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
     "axios": "^1.8.1",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
@@ -26,7 +27,8 @@
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.9.0",
-    "mongoose": "^8.6.3"
+    "mongoose": "^8.6.3",
+    "multer": "^1.4.5-lts.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

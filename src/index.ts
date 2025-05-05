@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
 import connectDB from './config/database';
 import binRoutes from './routes/binRoutes';
 import adminRoutes from './routes/adminRoutes';
@@ -37,6 +38,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 app.use('/api/bins', binRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/collector', collectorRoutes);
@@ -45,7 +49,7 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/resident', residentRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/route-optimization', routeOptimizationRoutes);
-app.use('/api/issues', issueRoutes); // Changed from '/api/issue' to '/api/issues' for consistency
+app.use('/api/issues', issueRoutes); 
 app.use('/api/settings', settingsRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/bin-suggestions', binSuggestionRoutes);
