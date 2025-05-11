@@ -277,34 +277,39 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
     // Get all areas
     const areas = await Area.find();
     
+    // Function to process bins with addresses
+    const processBinsWithAddresses = async (bins: any[]) => {
+      return Promise.all(
+        bins.map(async (bin) => {
+          // Use stored address if available, otherwise generate one
+          let address = bin.address;
+          if (!address) {
+            address = await getAddressFromCoordinates(bin.location.coordinates);
+            // Update the bin with the generated address for future use
+            await Bin.findByIdAndUpdate(bin._id, { address });
+          }
+          
+          return {
+            _id: bin._id,
+            location: bin.location,
+            fillLevel: bin.fillLevel,
+            lastCollected: bin.lastCollected,
+            wasteType: bin.wasteType,
+            address,
+            status: bin.status || 'ACTIVE'
+          };
+        })
+      );
+    };
+    
     // Map over areas and add bins for each
     const areasWithBins = await Promise.all(
       areas.map(async (area) => {
         // Get bins for this area - include wasteType, status and address in selection
         const bins = await Bin.find({ area: area._id }).select('location fillLevel lastCollected wasteType address status');
         
-        // Map bins and use stored address when available
-        const binsWithAddresses = await Promise.all(
-          bins.map(async (bin) => {
-            // Use stored address if available, otherwise generate one
-            let address = bin.address;
-            if (!address) {
-              address = await getAddressFromCoordinates(bin.location.coordinates);
-              // Update the bin with the generated address for future use
-              await Bin.findByIdAndUpdate(bin._id, { address });
-            }
-            
-            return {
-              _id: bin._id,
-              location: bin.location,
-              fillLevel: bin.fillLevel,
-              lastCollected: bin.lastCollected,
-              wasteType: bin.wasteType,
-              address,
-              status: bin.status
-            };
-          })
-        );
+        // Process bins with addresses
+        const binsWithAddresses = await processBinsWithAddresses(bins);
 
         return {
           areaName: area.name,
@@ -317,8 +322,44 @@ export const getAllAreasWithBins = async (req: Request, res: Response): Promise<
       })
     );
 
-    console.log(`Retrieved ${areas.length} areas with their bins`);
-    res.status(200).json(areasWithBins);
+    // Get unassigned bins (where area is null, undefined, or doesn't exist)
+    const unassignedBins = await Bin.find({ 
+      $or: [
+        { area: null },
+        { area: { $exists: false } }
+      ] 
+    }).select('location fillLevel lastCollected wasteType address status');
+
+    // Process unassigned bins with addresses
+    const unassignedBinsWithAddresses = await processBinsWithAddresses(unassignedBins);
+
+    // Create a special "Unassigned" area object
+    let response = areasWithBins;
+    
+    if (unassignedBinsWithAddresses.length > 0) {
+      const unassignedArea = {
+        areaName: "Unassigned",
+        areaID: "unassigned",
+        geometry: {
+          type: "Polygon",
+          coordinates: [] // Empty coordinates since there's no real geometry
+        },
+        bins: unassignedBinsWithAddresses,
+        startLocation: {
+          type: "Point",
+          coordinates: [0, 0] // Default coordinates
+        },
+        endLocation: {
+          type: "Point",
+          coordinates: [0, 0] // Default coordinates
+        }
+      };
+      
+      response.push(unassignedArea);
+    }
+
+    console.log(`Retrieved ${areas.length} areas with their bins and ${unassignedBinsWithAddresses.length} unassigned bins`);
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error getting areas with bins:', error);
     res.status(500).json({ message: 'Server error' });
