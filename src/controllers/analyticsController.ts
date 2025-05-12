@@ -25,10 +25,13 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
       throw new Error("Expected bins to be an array");
     }
 
+    // Filter out bins without an assigned area
+    const binsWithArea = bins.filter(bin => bin.area);
+
     // Group bins by area
-    const transformedTrends = bins.reduce((acc, bin) => {
+    const transformedTrends = binsWithArea.reduce((acc, bin) => {
       const date = new Date(bin.lastCollected).toISOString().split('T')[0]; // Extract the date (YYYY-MM-DD)
-      const areaName = (bin.area as any)?.name || 'Unassigned'; // Get area name or default to 'Unassigned'
+      const areaName = (bin.area as any).name;
 
       if (!acc[areaName]) {
         acc[areaName] = [];
@@ -59,8 +62,11 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
       throw new Error("Expected bins to be an array");
     }
 
+    // Filter out bins without an assigned area
+    const binsWithArea = bins.filter(bin => bin.area);
+
     // Group analytics by both area and waste type
-    const analytics = bins.reduce((acc, bin) => {
+    const analytics = binsWithArea.reduce((acc, bin) => {
       const areaName = (bin.area as any).name;
       const wasteType = bin.wasteType;
       
@@ -261,9 +267,12 @@ export const getCollectionEfficiencyAndBinUtilization = async (req: Request, res
       throw new Error("Expected bins to be an array");
     }
 
+    // Filter out bins without an assigned area
+    const binsWithArea = bins.filter(bin => bin.area);
+
     // Group data by area
-    const areaData = bins.reduce((acc, bin) => {
-      const areaName = (bin.area as any)?.name || 'Unassigned';
+    const areaData = binsWithArea.reduce((acc, bin) => {
+      const areaName = (bin.area as any).name;
 
       if (!acc[areaName]) {
         acc[areaName] = {

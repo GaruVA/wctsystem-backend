@@ -451,8 +451,24 @@ const seedData = async () => {
     
     // Process bins with addresses and insert them
     const processedBins = await processBinsWithAddresses();
+    
+    // Add the specific bin that isn't assigned to an area
+    const specialBin = new Bin({
+      _id: "6820b7479c017d4983fa1f82",
+      location: {
+        type: 'Point',
+        coordinates: [80.039428, 6.820209]
+      },
+      fillLevel: 50,
+      wasteType: "ORGANIC",
+      address: "NSBM Green University, CO, Sri Lanka",
+      status: "ACTIVE",
+      lastCollected: new Date("2025-05-11T12:35:35.874Z") // Equivalent to the provided timestamp
+    });
+    await specialBin.save();
+    
     const bins = await Bin.insertMany(processedBins);
-    console.log(`Added ${bins.length} bins with addresses`);
+    console.log(`Added ${bins.length} bins with addresses plus 1 special bin`);
 
     // Create Collectors with positions on actual streets within their areas
     const collectorsData = [
@@ -523,22 +539,23 @@ const seedData = async () => {
     ];
     const collectors = await Collector.insertMany(collectorsData);
 
-    // Create Issues for some bins
+    // Create Issues for some bins with specific data provided
     const issuesData = [
       {
-        bin: bins[1]._id,
-        issueType: 'Sensor Malfunction',
-        description: 'Fill level sensor not reporting correctly.'
+        _id: "68185b85bea215d31cc5a95c",
+        description: "Physical damage observed on the bin.",
+        images: ["http://192.168.1.22:5000/uploads/images/1746426757633-124903527.jpeg"],
+        status: "resolved",
+        createdAt: new Date("2025-05-04T12:05:57.671Z"),
+        updatedAt: new Date("2025-05-04T13:30:31.078Z")
       },
       {
-        bin: bins[3]._id,
-        issueType: 'Damaged Bin',
-        description: 'Physical damage observed on the bin.'
-      },
-      {
-        bin: bins[7]._id,
-        issueType: 'Graffiti',
-        description: 'Bin covered in graffiti needs cleaning.'
+        _id: "68186f483e50ca75b84371d1",
+        description: "Bin covered in graffiti needs cleaning.",
+        images: ["http://192.168.1.22:5000/uploads/images/1746431816156-648807367.jpeg"],
+        status: "pending",
+        createdAt: new Date("2025-05-04T13:30:16.203Z"),
+        updatedAt: new Date("2025-05-05T21:04:17.286Z")
       }
     ];
     await Issue.insertMany(issuesData);
