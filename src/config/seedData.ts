@@ -170,7 +170,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.85924995176988, 6.870162993824585] },
-        fillLevel: 65,
+        fillLevel: 50,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
         status: 'ACTIVE',
@@ -202,7 +202,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.859872224219, 6.866392241560089] },
-        fillLevel: 60,
+        fillLevel: 40,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
         status: 'ACTIVE',
@@ -234,7 +234,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.86220038145342, 6.862839824711644] },
-        fillLevel: 85,
+        fillLevel: 70,
         area: areas[0]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
         status: 'ACTIVE',
@@ -276,7 +276,7 @@ const seedData = async () => {
       // Bins for Pamankada West (area[1])
       {
         location: { type: 'Point', coordinates: [79.86465509415085, 6.8708554775313955] },
-        fillLevel: 95,
+        fillLevel: 40,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
         status: 'ACTIVE',
@@ -308,7 +308,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.86635025013291, 6.873113650550462] },
-        fillLevel: 85,
+        fillLevel: 70,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
         status: 'ACTIVE',
@@ -380,7 +380,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.8725515173578, 6.875073565656626] },
-        fillLevel: 80,
+        fillLevel: 60,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'HAZARDOUS',
         status: 'ACTIVE',
@@ -420,7 +420,7 @@ const seedData = async () => {
       },
       {
         location: { type: 'Point', coordinates: [79.87034137727991, 6.878673823337162] },
-        fillLevel: 85,
+        fillLevel: 60,
         area: areas[1]._id as mongoose.Schema.Types.ObjectId,
         wasteType: 'RECYCLE',
         status: 'ACTIVE',
