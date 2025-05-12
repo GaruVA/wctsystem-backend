@@ -109,10 +109,13 @@ export const getSchedules = async (req: Request, res: Response): Promise<void> =
       collectorId, 
       status, 
       fromDate, 
-      toDate, 
+      toDate,
+      date,
       limit = 100,
       page = 1
     } = req.query;
+
+    console.log('Query parameters:', { areaId, collectorId, status, fromDate, toDate, date });
 
     // Build query
     const query: any = {};
@@ -129,16 +132,32 @@ export const getSchedules = async (req: Request, res: Response): Promise<void> =
       query.status = status;
     }
     
-    // Date range filter
-    if (fromDate || toDate) {
+    // Date filtering logic
+    if (date) {
+      // If a specific date is provided, filter for that exact date
+      // Create start and end of the day for the given date in UTC
+      const dateString = date as string;
+      const startDate = new Date(`${dateString}T00:00:00.000Z`);
+      const endDate = new Date(`${dateString}T23:59:59.999Z`);
+      
+      // Filter schedules for the exact day using UTC dates
+      query.date = { $gte: startDate, $lte: endDate };
+      console.log(`Filtering schedules for date: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    } 
+    // Date range filter - only apply if specific date not provided
+    else if (fromDate || toDate) {
       query.date = {};
       if (fromDate) {
-        query.date.$gte = new Date(fromDate as string);
+        const fromDateObj = new Date(`${fromDate as string}T00:00:00.000Z`);
+        query.date.$gte = fromDateObj;
       }
       if (toDate) {
-        query.date.$lte = new Date(toDate as string);
+        const toDateObj = new Date(`${toDate as string}T23:59:59.999Z`);
+        query.date.$lte = toDateObj;
       }
     }
+
+    console.log('Final query:', JSON.stringify(query));
 
     // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit);
@@ -153,6 +172,8 @@ export const getSchedules = async (req: Request, res: Response): Promise<void> =
     
     // Get total count for pagination
     const totalCount = await Schedule.countDocuments(query);
+
+    console.log(`Found ${schedules.length} schedules matching query`);
     
     res.json({
       data: schedules,
@@ -386,12 +407,11 @@ export const getWeeklyScheduleOverview = async (req: Request, res: Response): Pr
     }
     
     // Create date range for the query
-    const startDate = new Date(fromDate as string);
-    const endDate = new Date(toDate as string);
+    const startDate = new Date(`${fromDate as string}T00:00:00.000Z`);
+    const endDate = new Date(`${toDate as string}T23:59:59.999Z`);
     
-    // Set times to start and end of day to ensure we capture all schedules
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    // No need to set hours again since we're already doing it with the ISO strings
+    console.log(`Weekly overview date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
     
     // Aggregate schedules for the week, grouped by date and status
     const weeklyOverview = await Schedule.aggregate([
@@ -401,9 +421,17 @@ export const getWeeklyScheduleOverview = async (req: Request, res: Response): Pr
         }
       },
       {
+        // Extract the date part only for grouping by day
+        $addFields: {
+          dateWithoutTime: {
+            $dateToString: { format: "%Y-%m-%d", date: "$date" }
+          }
+        }
+      },
+      {
         $group: {
           _id: {
-            date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+            date: "$dateWithoutTime", // Group by the date without time
             status: "$status"
           },
           count: { $sum: 1 }
@@ -427,9 +455,37 @@ export const getWeeklyScheduleOverview = async (req: Request, res: Response): Pr
       }
     ]);
     
+    // Ensure all dates in the range have entries, even if there are no schedules
+    const allDatesInRange = [];
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      
+      // Check if this date exists in the weeklyOverview
+      const existingEntry = weeklyOverview.find(entry => entry.date === dateStr);
+      
+      if (!existingEntry) {
+        // Add an empty entry for this date
+        allDatesInRange.push({
+          date: dateStr,
+          statusCounts: [],
+          totalCount: 0
+        });
+      } else {
+        // Use the existing entry
+        allDatesInRange.push(existingEntry);
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    console.log(`Weekly overview results:`, JSON.stringify(allDatesInRange, null, 2));
+    
     res.json({
       success: true,
-      data: weeklyOverview
+      data: allDatesInRange
     });
   } catch (error: any) {
     console.error('Error getting weekly schedule overview:', error);
@@ -562,14 +618,16 @@ export const autoGenerateSchedule = async (req: Request, res: Response): Promise
         bins // Pass the actual bins with fill levels for accurate duration calculation
       );
 
-      // Set schedule time to tomorrow morning
-      const scheduleDate = new Date(tomorrow);
-      const scheduleStartTime = new Date(tomorrow);
-      scheduleStartTime.setHours(8, 0, 0, 0); // 8:00 AM
+      // Create a date object for tomorrow but use proper UTC date handling
+      const scheduleDate = new Date(`${format(tomorrow, 'yyyy-MM-dd')}T00:00:00.000Z`);
+      
+      // Set the start time to 8:00 AM
+      const scheduleStartTime = new Date(`${format(tomorrow, 'yyyy-MM-dd')}T08:00:00.000Z`);
       
       // Duration is now directly usable from the route optimization service
       const scheduleDuration = routeResult.duration as number;
       
+      // Calculate end time based on start time and duration
       const scheduleEndTime = new Date(scheduleStartTime);
       scheduleEndTime.setMinutes(scheduleEndTime.getMinutes() + scheduleDuration);
 

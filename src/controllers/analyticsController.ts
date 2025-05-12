@@ -318,21 +318,25 @@ export const getDashboardMetrics = async (_req: Request, res: Response): Promise
     const totalBins = await Bin.countDocuments();
     const totalAreas = await Area.countDocuments();
 
-    // Today's date range
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(todayStart.getDate() + 1);
+    // Today's date range using proper UTC dates
+    const todayStr = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
+    const todayStart = new Date(`${todayStr}T00:00:00.000Z`);
+    const tomorrowStart = new Date(`${todayStr}T23:59:59.999Z`);
 
     // Collections today: count bins collected today
     const binsCollectedToday = await Bin.countDocuments({
-      lastCollected: { $gte: todayStart, $lt: tomorrowStart }
+      lastCollected: { $gte: todayStart, $lte: tomorrowStart }
     });
     
-    // Also count bins scheduled for today from the Schedule model
+    // Also count schedules for today with proper UTC date filtering
     const schedulesForToday = await Schedule.countDocuments({
-      date: { $gte: todayStart, $lt: tomorrowStart },
+      date: { $gte: todayStart, $lte: tomorrowStart },
       status: { $in: ['scheduled', 'in-progress', 'completed'] }
+    });
+
+    // Count total schedules (including all statuses)
+    const allSchedulesToday = await Schedule.countDocuments({
+      date: { $gte: todayStart, $lte: tomorrowStart }
     });
     
     // Combined count for today's collections (actual + scheduled)
@@ -343,7 +347,12 @@ export const getDashboardMetrics = async (_req: Request, res: Response): Promise
     const totalFill = bins.reduce((sum, bin) => sum + bin.fillLevel, 0);
     const fillLevelTrendToday = bins.length > 0 ? Math.round((totalFill / bins.length) * 100) / 100 : 0;
 
-    res.json({ totalBins, totalAreas, collectionsToday, fillLevelTrendToday });
+    res.json({ 
+      totalBins, 
+      totalAreas, 
+      fillLevelTrendToday,
+      collectionsToday: allSchedulesToday // Include total count of all schedules
+    });
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
     res.status(500).json({ message: 'Server error' });
