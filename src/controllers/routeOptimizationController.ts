@@ -15,8 +15,7 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     const { areaId } = req.params;
     const { 
       threshold = 70, 
-      wasteType, 
-      includeCritical = "false" 
+      wasteType
     } = req.query;
     
     // Find area
@@ -48,28 +47,7 @@ export const generateOptimizedRoute = async (req: Request, res: Response): Promi
     }
     
     // Find all bins that match the criteria
-    let eligibleBins = await Bin.find(query).select('location fillLevel lastCollected wasteType _id') as IBin[];
-    
-    // If includeCritical is true, add critical bins (>=90% fill) regardless of waste type
-    if (includeCritical === 'true') {
-      // Query for critical bins that aren't already in the eligible bins list
-      const criticalBinsQuery: any = { 
-        area: areaId,
-        fillLevel: { $gte: 90 }
-      };
-      
-      // If we're filtering by waste type, make sure we don't duplicate bins
-      if (wasteType) {
-        const eligibleBinIds = eligibleBins.map(bin => (bin._id as mongoose.Types.ObjectId).toString());
-        criticalBinsQuery._id = { $nin: eligibleBinIds };
-      }
-      
-      const criticalBins = await Bin.find(criticalBinsQuery)
-        .select('location fillLevel lastCollected wasteType _id') as IBin[];
-      
-      // Combine the eligible bins with critical bins
-      eligibleBins = [...eligibleBins, ...criticalBins];
-    }
+    const eligibleBins = await Bin.find(query).select('location fillLevel lastCollected wasteType _id') as IBin[];
     
     if (eligibleBins.length === 0) {
       res.status(200).json({
