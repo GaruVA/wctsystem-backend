@@ -123,12 +123,12 @@ export const getAnalytics = async (req: Request, res: Response): Promise<void> =
       wasteTypeDistribution: Record<string, number>;
     }>);
 
-    // Calculate averages
+    // Calculate averages and round service delay
     for (const areaName in analytics) {
       const areaData = analytics[areaName];
       areaData.utilization = areaData.totalFillLevel / areaData.bins;
       areaData.collectionEfficiency = areaData.totalCollections / areaData.bins;
-      areaData.serviceDelay = areaData.totalServiceDelay / areaData.bins;
+      areaData.serviceDelay = parseFloat((areaData.totalServiceDelay / areaData.bins).toFixed(2)); // Round to 2 decimal places
     }
 
     res.json(analytics);
