@@ -180,7 +180,8 @@ export const createBin = async (req: Request, res: Response): Promise<void> => {
             wasteType: wasteType || 'GENERAL', // Default to GENERAL if not specified
             address, // Add the address
             area: areaId, // Auto-assigned area (null if not within any area)
-            status: status || 'ACTIVE' // Default to ACTIVE if not specified
+            status: status || 'ACTIVE', // Default to ACTIVE if not specified
+            lastCollected: new Date(), // Initialize to current date
         });
 
         await newBin.save();

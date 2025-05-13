@@ -28,26 +28,39 @@ export const getFillLevelTrends = async (req: Request, res: Response): Promise<v
     // Filter out bins without an assigned area
     const binsWithArea = bins.filter(bin => bin.area);
 
-    // Group bins by area
+    // Group bins by area and date, and calculate average fill level
     const transformedTrends = binsWithArea.reduce((acc, bin) => {
       const date = new Date(bin.lastCollected).toISOString().split('T')[0]; // Extract the date (YYYY-MM-DD)
       const areaName = (bin.area as any).name;
 
       if (!acc[areaName]) {
-        acc[areaName] = [];
+        acc[areaName] = {};
       }
 
-      acc[areaName].push({
-        fillLevel: bin.fillLevel,
-        lastCollected: date,
-      });
+      if (!acc[areaName][date]) {
+        acc[areaName][date] = { totalFillLevel: 0, count: 0 };
+      }
+
+      acc[areaName][date].totalFillLevel += bin.fillLevel;
+      acc[areaName][date].count += 1;
 
       return acc;
-    }, {} as Record<string, { fillLevel: number; lastCollected: string }[]>);
+    }, {} as Record<string, Record<string, { totalFillLevel: number; count: number }>>);
 
-    console.log("Transformed trends:", transformedTrends);
+    // Calculate averages and format the response
+    const response = Object.entries(transformedTrends).map(([areaName, dates]) => {
+      return {
+        area: areaName,
+        trends: Object.entries(dates).map(([date, { totalFillLevel, count }]) => ({
+          date,
+          averageFillLevel: totalFillLevel / count,
+        })),
+      };
+    });
 
-    res.json(transformedTrends);
+    console.log("Transformed trends with averages:", response);
+
+    res.json(response);
   } catch (error) {
     console.error('Error fetching fill level trends:', error);
     res.status(500).json({ message: 'Server error' });

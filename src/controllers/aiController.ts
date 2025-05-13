@@ -38,11 +38,12 @@ export const generateAIInsights = async (req: Request, res: Response): Promise<v
       ${JSON.stringify(collectionEfficiencyData)}
 
       Based on the provided data, recommend strategies to optimize waste collection schedules, improve efficiency, and address critical issues.
-      Provide a summary of your findings and actionable suggestions. Show only the most relevant insights.
+      Provide a summary of your findings and actionable suggestions. Show only the most relevant insights.Give me in point wise format.
+      Avoid unnecessary details and focus on the key takeaways.
     `;
 
     // Define the API key and model
-    const apiKey = 'a1615035d261743d70e78e8d4b11ab27'; // Replace with your email
+    const apiKey = '85c6ed2a27505f5284e57d8978128405'; // Replace with your email
     const model = 'gpt-3.5-turbo'; // Default model
 
     // Build the API URL
