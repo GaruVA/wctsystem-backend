@@ -38,7 +38,7 @@ export const generateAIInsights = async (req: Request, res: Response): Promise<v
       ${JSON.stringify(collectionEfficiencyData)}
 
       Based on the provided data, recommend strategies to optimize waste collection schedules, improve efficiency, and address critical issues.
-      Provide a summary of your findings and actionable suggestions. Show only the most relevant insights.Give me in point wise format.
+      Provide a summary of your findings and actionable suggestions. Show only the most relevant insights. Use proper headings and subheadings for clarity.
       Avoid unnecessary details and focus on the key takeaways.
     `;
 
@@ -56,8 +56,17 @@ export const generateAIInsights = async (req: Request, res: Response): Promise<v
     // Call the ChatGPT API
     const response = await axios.get(apiUrl);
 
-    // Extract the generated insights
-    const insights = typeof response.data === 'object' ? JSON.stringify(response.data, null, 2) : response.data || 'No insights generated.';
+    // Extract and clean the generated insights
+    let insights = response.data || 'No insights generated.';
+    if (typeof insights === 'object') {
+      insights = JSON.stringify(insights, null, 2); // Convert to string if it's an object
+    }
+
+    // Format the response to ensure proper structure
+    insights = insights
+      .replace(/- \*\*/g, '\n\n- **') // Add spacing before each main heading
+      .replace(/\\n/g, '\n') // Replace escaped newlines with actual newlines
+      .replace(/[\[\]{}"]/g, ''); // Remove brackets and quotes
 
     res.status(200).json({ insights });
   } catch (error: any) {
