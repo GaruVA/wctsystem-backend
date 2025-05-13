@@ -281,12 +281,16 @@ class NotificationService {
           return;
         }
         
+        // Get notification settings for threshold
+        const warningThreshold = settings?.notifications?.warningThreshold || 70;
+        
         // Make the API call to auto-generate a schedule
         const response = await axios.post(
           `http://localhost:5000/api/schedules/auto-generate`,
           {
             areaId: areaId,
-            wasteType: wasteType
+            wasteType: wasteType,
+            fillThreshold: warningThreshold // Pass the fill threshold to only include bins with high fill levels
           },
           {
             headers: {
@@ -305,7 +309,7 @@ class NotificationService {
             await Alert.create({
               type: AlertType.AUTO_SCHEDULE,
               title: 'Schedule Auto-Generated',
-              description: `A collection schedule has been automatically generated for ${wasteType} bins in ${areaName} due to warning fill levels.`,
+              description: `A collection schedule has been automatically generated for ${wasteType} bins in ${areaName} with fill level ≥ ${warningThreshold}%.`,
               severity: AlertSeverity.MEDIUM,
               status: AlertStatus.UNREAD
             });

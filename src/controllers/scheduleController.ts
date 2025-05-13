@@ -278,12 +278,11 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
       collectorId,
       date,
       startTime,
-      endTime,
-      status,
       route,
       distance,
       duration,
-      notes
+      notes,
+      wasteType
     } = req.body;
 
     // Find the schedule
@@ -300,12 +299,48 @@ export const updateSchedule = async (req: Request, res: Response): Promise<void>
     }
     if (date) schedule.date = new Date(date);
     if (startTime) schedule.startTime = new Date(startTime);
-    if (endTime) schedule.endTime = new Date(endTime);
-    if (status) schedule.status = status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
-    if (route) schedule.route = route;
-    if (distance !== undefined) schedule.distance = distance;
-    if (duration !== undefined) schedule.duration = duration;
+    
+    // If route is updated, recalculate the distance if not provided
+    if (route) {
+      schedule.route = route;
+      
+      // If distance is not explicitly provided but route changes, recalculate it
+      if (distance === undefined) {
+        const { calculateDistance } = require('../services/routeOptimizationService');
+        let totalDistance = 0;
+        
+        // Calculate distance using the existing function from routeOptimizationService
+        for (let i = 0; i < route.length - 1; i++) {
+          const [lon1, lat1] = route[i];
+          const [lon2, lat2] = route[i + 1];
+          totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
+        }
+        
+        // Update the distance
+        schedule.distance = Math.round(totalDistance * 100) / 100;
+      } else {
+        schedule.distance = distance;
+      }
+    } else if (distance !== undefined) {
+      schedule.distance = distance;
+    }
+    
+    // Update duration if provided
+    if (duration !== undefined) {
+      schedule.duration = duration;
+    }
+    
+    // Auto-calculate end time based on start time and duration
+    // This happens if either startTime or duration has changed
+    if (schedule.startTime && schedule.duration) {
+      const startDateTime = new Date(schedule.startTime);
+      const endDateTime = new Date(startDateTime);
+      endDateTime.setMinutes(startDateTime.getMinutes() + schedule.duration);
+      schedule.endTime = endDateTime;
+    }
+    
     if (notes !== undefined) schedule.notes = notes;
+    if (wasteType !== undefined) schedule.wasteType = wasteType;
 
     // Save updated schedule
     await schedule.save();
@@ -502,7 +537,7 @@ export const getWeeklyScheduleOverview = async (req: Request, res: Response): Pr
  */
 export const autoGenerateSchedule = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { areaId, wasteType } = req.body;
+    const { areaId, wasteType, fillThreshold = 70 } = req.body;
 
     // Validate input
     if (!areaId || !wasteType) {
@@ -557,17 +592,18 @@ export const autoGenerateSchedule = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Get all bins of the specified waste type in the area
+    // Get bins of the specified waste type in the area with fill level above the threshold
     const bins = await Bin.find({
       area: areaId,
       wasteType,
-      status: { $in: ['ACTIVE', 'MAINTENANCE'] }, // Only include active or maintenance bins
+      fillLevel: { $gte: fillThreshold },  // Only include bins with fill level >= threshold
+      status: { $in: ['ACTIVE', 'MAINTENANCE'] }
     }).lean();
 
     if (bins.length === 0) {
       res.status(400).json({
         success: false,
-        message: `No ${wasteType} bins found in the area`
+        message: `No ${wasteType} bins with fill level >= ${fillThreshold}% found in the area`
       });
       return;
     }
@@ -655,14 +691,14 @@ export const autoGenerateSchedule = async (req: Request, res: Response): Promise
         distance: routeResult.distance,
         duration: scheduleDuration,
         binSequence: binSequence,
-        notes: `Auto-generated schedule for ${wasteType} waste collection due to high fill levels`
+        notes: `Auto-generated schedule for ${wasteType} waste collection due to high fill levels (${fillThreshold}%+)`
       });
 
       await newSchedule.save();
 
       res.status(201).json({
         success: true,
-        message: `Schedule automatically generated for ${wasteType} collection in ${area.name} for ${format(scheduleDate, 'EEEE, MMMM d')}`,
+        message: `Schedule automatically generated for ${wasteType} collection in ${area.name} for ${format(scheduleDate, 'EEEE, MMMM d')} (${bins.length} bins with fill level >= ${fillThreshold}%)`,
         schedule: newSchedule
       });
     } catch (error) {
