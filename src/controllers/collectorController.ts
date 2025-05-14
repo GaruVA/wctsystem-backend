@@ -14,25 +14,38 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 export const loginCollector = async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body;
+  console.log(`[LoginAttempt] Received login request for username: ${username} at ${new Date().toISOString()}`);
   try {
+    console.log(`[LoginAttempt] Searching for collector: ${username} at ${new Date().toISOString()}`);
     const collector = await Collector.findOne({ username });
+    console.log(`[LoginAttempt] Collector.findOne completed at ${new Date().toISOString()}. Collector found: ${collector ? collector.username : 'null'}`);
+
     if (!collector) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      console.log(`[LoginAttempt] Collector not found in DB: ${username}`);
+      res.status(401).json({ message: 'Invalid credentials' }); // Keep message generic for security
       return;
     }
+
+    console.log(`[LoginAttempt] Comparing password for: ${username} at ${new Date().toISOString()}`);
     const isMatch = await collector.comparePassword(password);
+    console.log(`[LoginAttempt] collector.comparePassword completed at ${new Date().toISOString()}. Password match result for ${username}: ${isMatch}`);
+
     if (!isMatch) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      console.log(`[LoginAttempt] Password mismatch for: ${username}`);
+      res.status(401).json({ message: 'Invalid credentials' }); // Keep message generic
       return;
     }
+
+    console.log(`[LoginAttempt] Login successful, generating token for: ${username} at ${new Date().toISOString()}`);
     const token = jwt.sign(
       { id: collector._id, role: 'collector' },
       JWT_SECRET,
       { expiresIn: '8h' }
     );
+    console.log(`[LoginAttempt] Token generated for: ${username} at ${new Date().toISOString()}`);
     res.json({ token });
   } catch (error) {
-    console.error(error);
+    console.error(`[LoginAttempt] Error during login for ${username} at ${new Date().toISOString()}:`, error);
     res.status(500).json({ message: 'Server error' });
   }
 };
